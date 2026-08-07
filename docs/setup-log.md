@@ -128,15 +128,37 @@ dotnet build wpf-client\SmartFactoryVision.Client.csproj
 ## 9. GitHub 원격 저장소
 
 ```powershell
-winget install --id GitHub.cli --silent      # gh 2.97.0
-gh auth login                                 # 대화형 — 사용자가 직접 실행
-gh repo create smart-factory-vision --private --source=. --push
+# 처음 계획: gh CLI 로 저장소 생성 → 실패, 아래 참고
+winget install --id GitHub.cli --silent      # gh 2.97.0 설치는 성공
+
+# 실제로 한 방법: GitHub 웹에서 저장소를 만들고 로컬에 연결
+git remote add origin https://github.com/kimde132/smart-factory-vision.git
+git push -u origin main
 ```
 
 - **왜:** 백업과 이력 보존. 포트폴리오로 공개하는 것은 프로젝트가 모양을 갖춘 뒤로 미룬다.
-- **막힌 것:** `gh auth login` 은 브라우저 인증이라 자동화할 수 없다. 사용자가 직접 실행해야 한다.
+- **막힌 것:** `gh` 설치는 성공했는데 **이미 열려 있던 셸에서 `gh` 명령을 찾지 못했다**(`command not found`).
+  설치 프로그램이 시스템 PATH 를 갱신해도 **이미 실행 중인 셸은 시작할 때의 PATH 를 그대로 들고 있기 때문**이다.
+- **해결:** 전체 경로(`"C:\Program Files\GitHub CLI\gh.exe"`)로 실행하거나 새 터미널을 열면 되지만,
+  `gh auth login` 은 어차피 대화형 브라우저 인증이라 자동화할 수 없다.
+  그래서 **GitHub 웹에서 저장소를 직접 만들고** `git remote add` + `git push` 로 연결했다.
+  인증은 Git for Windows 에 포함된 Git Credential Manager 가 처리했다(자격 증명이 이미 저장돼 있어 창도 뜨지 않았다).
 - **비공개로 시작한 이유:** 공개로 한 번 올린 내용은 포크·캐시로 남아 되돌리기 어렵다. 비공개 → 공개는 언제든 단추 하나다.
-- push 직전에 `.env` 가 추적 목록에 없는 것을 다시 확인한다.
+
+**push 전 안전 점검** — `git status --ignored` 는 "지금 무시되는가"만 본다.
+push 는 **히스토리 전체**를 올리므로 히스토리 기준으로 다시 확인했다.
+
+```powershell
+git ls-files                                        # 현재 추적 중인 파일 전체
+git log --all --diff-filter=A --name-only           # 과거 커밋에 추가된 적 있는 모든 파일
+git grep '<실제 비밀번호>' $(git rev-list --all)     # 모든 커밋 내용에서 비밀번호 검색
+```
+
+결과: `.env` 는 히스토리에 한 번도 없었고, 비밀번호 문자열도 발견되지 않았다.
+`.env.example` 에 값이 있는 항목은 `localhost`, `1433`, 드라이버 이름 등 비밀이 아닌 기본값뿐이다.
+
+**push 후 검증:** 로컬 `main` 과 원격 `main` 이 같은 커밋(`c02fde8`)을 가리키고,
+원격 파일 20개 중 `.env` 가 없음을 `git ls-tree -r origin/main` 으로 확인했다.
 
 ---
 
