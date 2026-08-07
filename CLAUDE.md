@@ -86,7 +86,8 @@ Colab 환경 세팅, .NET SDK 설치 확인, 폴더 스캐폴딩
 빠르게 처리하고 `docs/setup-log.md`에 기록한다. 항목당 5줄 이내:
 실행한 명령 / 왜 필요했나 한 줄 / 막힌 것 / 해결 방법.
 
-**개념 해설은 넣지 않는다.** 사용자가 물어보면 그때 설명한다.
+**개념 해설은 `setup-log.md`에 넣지 않는다.** 사용자가 물어보면 그때 설명하고,
+남겨둘 가치가 있는 배경 지식은 `docs/foundations.md`에 따로 쌓는다.
 
 ## 등급이 애매하면
 
@@ -177,6 +178,7 @@ A등급 코드는 사용자가 직접 작성하므로 **주석도 사용자가 �
 | 문서 | 작성 |
 |---|---|
 | `docs/setup-log.md` | Claude |
+| `docs/foundations.md` | Claude — 기반 지식 해설. 사용자가 요청하면 갱신·보강한다 |
 | `docs/decisions.md` | **사용자** — Claude는 첨삭만 |
 | `docs/labeling-guide.md` | **사용자** — Claude는 첨삭만 |
 | `docs/experiment-log.md` | **사용자** — Claude는 첨삭만 |
@@ -223,6 +225,7 @@ smart-factory-vision-inspection/
 ├── .gitignore
 ├── docs/
 │   ├── work-grades.md      # A/B/C 등급표
+│   ├── foundations.md      # 기반 지식 — 각 기술이 무엇이고 어떻게 연결되는가
 │   ├── decisions.md
 │   ├── setup-log.md
 │   ├── labeling-guide.md
