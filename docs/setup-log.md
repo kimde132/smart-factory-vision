@@ -59,3 +59,56 @@ Start-Process powershell -Verb RunAs -ArgumentList '-File', 'install-sql.ps1'
   - `/TCPENABLED=1` → TCP/IP를 **설치 시점에** 켠다 (pyodbc 접속의 전제 조건)
 - 그 외: `/FEATURES=SQLENGINE`(엔진만), `/INSTANCENAME=MSSQLSERVER`(기본 인스턴스 → `localhost`로 접속), `/NPENABLED=0`, `/IACCEPTSQLSERVERLICENSETERMS`.
 - 관리자 권한이 필요해 UAC 승인 창을 사용자가 직접 눌렀다.
+
+### 3-1. 여기서 4번 연속으로 막혔다 (실패 기록)
+
+오늘 가장 오래 걸린 구간이다. 실패마다 증상이 달라서 원인을 하나씩 분리해야 했다.
+
+| # | 증상 | 원인 | 해결 |
+|---|---|---|---|
+| 1 | `SETUP.EXE`가 **1초 만에** 종료 코드 `-2067529714`(0x84C4000E). 설치 로그 폴더조차 안 생김 | 매체 경로가 **151자**. SQL Server 매체 안의 깊은 하위 경로와 합쳐져 Windows 260자 한계를 넘김 | 매체를 `C:\Users\kimde\sqlmedia`(22자)로 옮겨 설치. 경로 길이 35자로 축소 |
+| 2 | 관리자 권한 스크립트가 UAC 승인 후에도 아무 일 없이 종료. 로그 파일조차 안 생김 | **Windows PowerShell 5.1은 BOM 없는 `.ps1`을 UTF-8이 아니라 CP949로 읽는다.** 한글 주석 바이트가 깨지면서 그중 하나가 따옴표로 해석돼 문법 오류 5건 발생 | 임시 스크립트를 **ASCII 전용**으로 재작성. 이후 실행 전에 `[Parser]::ParseFile`로 문법 검사를 먼저 통과시키는 절차를 추가 |
+| 3 | 설치가 3분간 진행되다 로그가 **문장 중간에서 끊김**. 오류 메시지 없음 | 설치를 감싼 **관리자 권한 PowerShell 콘솔 창이 닫히면서** 그 안의 `setup.exe`가 함께 강제 종료됨 | PowerShell로 감싸지 않고 `SETUP.EXE`를 `-Verb RunAs`로 **직접** 실행. 콘솔 창이 없으니 닫힐 일도 없음 |
+| 4 | 재시도 시 24초 만에 실패. `Exit message: 시스템 데이터베이스 파일 master.mdf이(가) 이미 ...DATA에 있습니다` | 3번에서 강제 종료된 반쪽 설치가 시스템 DB 파일을 남겨둠. SQL Server는 그 위에 덮어쓰지 않는다 | `SETUP.EXE /ACTION=Uninstall /FEATURES=SQLENGINE /INSTANCENAME=MSSQLSERVER`로 제거(종료 코드 0, 서비스·폴더 모두 정리됨) 후 재설치 |
+
+**여기서 얻은 것:** 설치 프로그램이 로그를 **아예 안 남기면** 인자 파싱 이전 단계에서 죽은 것이고(경로·권한 문제), **문장 중간에서 끊기면** 외부에서 강제 종료된 것이다. 오류 메시지 없이 끝나는 두 경우를 구분하는 기준이 된다.
+
+## 4. Python 가상환경 + 패키지
+
+```powershell
+py -3.13 -m venv ai-server\.venv
+ai-server\.venv\Scripts\python.exe -m pip install -r ai-server\requirements.txt
+ai-server\.venv\Scripts\python.exe -m pip freeze > ai-server\requirements.lock.txt
+```
+
+- **왜:** 프로젝트 전용 패키지 공간. 시스템 파이썬을 오염시키지 않고, 다른 PC에서 같은 환경을 재현하기 위해서다.
+- **막힌 것:** 없음. Python 3.13에 torch·ultralytics 휠이 없을 것을 우려했으나 기우였다.
+- 설치된 주요 버전: `ultralytics 8.4.115`, `torch 2.13.0`(CPU), `pyodbc 5.3.0`, `fastapi 0.141.1`, `sqlalchemy 2.0.51`, `pandas 3.0.5`. 총 62개.
+- 3.12 강등은 불필요했다.
+
+## 5. Label Studio (라벨링 도구)
+
+```powershell
+py -3.13 -m venv .venv-labelstudio
+.venv-labelstudio\Scripts\python.exe -m pip install label-studio
+```
+
+- **왜:** `ai-server/.venv`와 **분리했다.** 라벨링 도구와 학습 코드는 같이 실행할 일이 없고, 의존성이 충돌할 수 있다.
+- **막힌 것:** 없음. `label-studio 1.23.0` 설치 성공.
+- **분리가 옳았던 근거:** Label Studio가 의존성으로 `psycopg`(PostgreSQL 드라이버)를 끌고 왔다. 이 프로젝트는 MSSQL을 쓰므로 같은 환경에 섞였으면 혼란스러웠을 것이다.
+- 프로젝트 생성과 라벨링 규칙 설정은 하지 않았다. **A등급(11·12번)이라 사용자가 직접 한다.**
+
+## 6. Colab GPU + Drive 마운트
+
+```python
+!nvidia-smi
+from google.colab import drive; drive.mount('/content/drive')
+import torch; torch.cuda.is_available()
+```
+
+- **왜:** 이 노트북 GPU는 Intel Arc라 CUDA가 안 된다. 학습은 전부 Colab에서 한다.
+- **막힌 것:** 없음.
+- 배정된 GPU: **Tesla T4, 15360 MiB**, `CUDA 사용 가능: True`.
+- Colab 쪽 버전: `ultralytics 8.4.115`(노트북과 동일), `torch 2.11.0+cu128`(노트북은 2.13.0 CPU — GPU 빌드라 다른 것이 정상).
+- 데이터 저장 위치: `MyDrive/smart-factory-vision`. 런타임은 유휴 시 끊기고 그 안의 파일은 사라지므로 Drive에 둔다.
+- 학습 스크립트는 만들지 않았다. **A등급(17번)이라 사용자가 직접 작성한다.**
