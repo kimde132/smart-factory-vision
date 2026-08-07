@@ -111,6 +111,41 @@ ALTER LOGIN [sa] DISABLE
 
 - 접속 정보는 `ai-server/.env` 에만 있고, git 이 무시하는 것을 `git status --ignored` 로 확인했다.
 
+## 8. .NET SDK + WPF 빈 프로젝트
+
+```powershell
+winget install --id Microsoft.DotNet.SDK.10 --silent
+dotnet new wpf -o wpf-client -n SmartFactoryVision.Client
+dotnet build wpf-client\SmartFactoryVision.Client.csproj
+```
+
+- **왜:** 3주차에 WPF 를 시작할 때 환경 문제로 며칠 날리지 않으려고 **빌드가 되는지만** 지금 확인해 둔다. 화면 구현은 하지 않았다.
+- **막힌 것:** 없음.
+- 결과: `net10.0-windows`, 빌드 **경고 0개 / 오류 0개**.
+- `bin/`, `obj/` 가 `.gitignore` 로 제외되는 것을 `git status --ignored` 로 확인했다.
+- 실제 소스 파일이 생겼으므로 `ai-server/.gitkeep`, `wpf-client/.gitkeep` 은 제거했다.
+
+## 9. GitHub 원격 저장소
+
+```powershell
+winget install --id GitHub.cli --silent      # gh 2.97.0
+gh auth login                                 # 대화형 — 사용자가 직접 실행
+gh repo create smart-factory-vision --private --source=. --push
+```
+
+- **왜:** 백업과 이력 보존. 포트폴리오로 공개하는 것은 프로젝트가 모양을 갖춘 뒤로 미룬다.
+- **막힌 것:** `gh auth login` 은 브라우저 인증이라 자동화할 수 없다. 사용자가 직접 실행해야 한다.
+- **비공개로 시작한 이유:** 공개로 한 번 올린 내용은 포크·캐시로 남아 되돌리기 어렵다. 비공개 → 공개는 언제든 단추 하나다.
+- push 직전에 `.env` 가 추적 목록에 없는 것을 다시 확인한다.
+
+---
+
+## 남아 있는 임시 파일
+
+설치에 쓴 매체가 `C:\Users\kimde\sqlmedia` 에 약 **1.2GB** 남아 있다.
+SQL Server 가 정상 동작하는 것을 확인했으므로 지워도 되고,
+재설치가 필요하면 `SQL2022-SSEI-Dev.exe` 를 다시 받으면 된다.
+
 ## 4. Python 가상환경 + 패키지
 
 ```powershell
