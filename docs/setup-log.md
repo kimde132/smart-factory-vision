@@ -73,6 +73,44 @@ Start-Process powershell -Verb RunAs -ArgumentList '-File', 'install-sql.ps1'
 
 **여기서 얻은 것:** 설치 프로그램이 로그를 **아예 안 남기면** 인자 파싱 이전 단계에서 죽은 것이고(경로·권한 문제), **문장 중간에서 끊기면** 외부에서 강제 종료된 것이다. 오류 메시지 없이 끝나는 두 경우를 구분하는 기준이 된다.
 
+### 3-2. 최종 설치 결과
+
+```
+Final result: 통과 / Exit code: 0
+MSSQLSERVER 서비스: Running (자동 시작)
+TCP 1433 포트: 수신 중
+```
+
+- SQL Server 2022 (RTM) 16.0.1000.6 (X64), Developer 에디션, 기본 인스턴스.
+- **ODBC Driver 18 은 winget 으로 따로 깔 필요가 없었다.** SQL Server 설치 시 필수 구성 요소로 함께 설치된다(설치 로그에 `msodbcsql_Cpu64_1.log`).
+- SSMS 21, ODBC 18(최신 버전으로 갱신), .NET SDK 10 은 winget 으로 설치했다.
+
+## 7. DB 초기 설정 + pyodbc 접속 검증
+
+```python
+# Windows 인증(현재 계정 = sysadmin)으로 접속해 실행
+CREATE DATABASE [smart_factory_vision]
+CREATE LOGIN [sfv_app] WITH PASSWORD = N'...', DEFAULT_DATABASE = [smart_factory_vision], CHECK_POLICY = ON
+CREATE USER [sfv_app] FOR LOGIN [sfv_app]
+ALTER ROLE db_owner ADD MEMBER [sfv_app]   -- 이 DB 안에서만 유효한 권한
+ALTER LOGIN [sa] DISABLE
+```
+
+- **왜 sa 를 안 쓰는가:** `sa` 는 서버 전체 최고 권한이라 공격 표적이 된다. 애플리케이션에는 **자기 DB 안에서만** 권한을 갖는 전용 로그인을 준다. `db_owner` 를 준 이유는 Alembic 이 마이그레이션으로 테이블을 만들어야 하기 때문이다.
+- **왜 sa 를 꺼도 안전한가:** 설치 시 `/SQLSYSADMINACCOUNTS` 로 Windows 계정을 sysadmin 에 넣었으므로, 문제가 생겨도 Windows 인증으로 들어갈 수 있다.
+- **막힌 것:** 없음. 계획서에서 예상했던 3대 실패(ODBC 18 암호화 기본값 / 인증 모드 / TCP 미활성)가 모두 발생하지 않았다. 혼합 모드와 TCP 를 설치 명령에 넣었고, `TrustServerCertificate=yes` 를 `.env` 에 미리 넣어 예방했기 때문이다.
+
+**검증 결과** (`ai-server/check_db.py`):
+
+```
+[성공] 접속됐습니다.
+  서버 버전  : Microsoft SQL Server 2022 (RTM) - 16.0.1000.6 (X64)
+  현재 DB    : smart_factory_vision
+  현재 로그인 : sfv_app
+```
+
+- 접속 정보는 `ai-server/.env` 에만 있고, git 이 무시하는 것을 `git status --ignored` 로 확인했다.
+
 ## 4. Python 가상환경 + 패키지
 
 ```powershell
