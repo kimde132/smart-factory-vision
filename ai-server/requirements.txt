@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────
+# ai-server 가 직접 쓰는 패키지 목록
+#
+# 이 파일은 무엇을 하는가:
+#   다른 PC(교육장 PC, 새 노트북)에서 같은 환경을 다시 만들기 위한 설치 목록이다.
+#   `pip install -r requirements.txt` 한 줄로 아래 패키지가 전부 깔린다.
+#
+# 실행 흐름에서의 위치:
+#   코드가 실행될 때 읽히는 파일이 아니다. 환경을 구축할 때만 쓴다.
+#
+# 여기에는 "내가 직접 import 하는 것"만 적는다.
+#   torch 처럼 ultralytics 가 알아서 끌고 오는 것은 적지 않는다.
+#   실제로 설치된 전체 버전 목록은 requirements.lock.txt 에 있다.
+# ─────────────────────────────────────────────────────────────
+
+# --- AI 비전 ---
+ultralytics        # YOLO 모델 학습·추론. torch, torchvision 을 의존성으로 함께 설치한다
+opencv-python      # 웹캠 촬영, 이미지 읽기/쓰기, 바운딩 박스 그리기
+
+# --- 웹 서버 ---
+fastapi            # WPF 클라이언트가 호출할 HTTP API 를 만든다
+uvicorn[standard]  # FastAPI 앱을 실제로 띄우는 서버 프로그램
+python-multipart   # 이미지 파일 업로드(multipart/form-data)를 받으려면 필요하다
+
+# --- 데이터베이스 (MSSQL) ---
+sqlalchemy         # 파이썬 객체로 SQL 을 다루게 해주는 도구
+pyodbc             # SQLAlchemy 와 SQL Server 사이를 잇는 실제 드라이버. ODBC Driver 18 이 설치돼 있어야 동작한다
+alembic            # 테이블 구조 변경 이력을 코드로 관리한다
+
+# --- Excel 추출 ---
+pandas             # 검사 이력을 표 형태로 다룬다
+openpyxl           # pandas 가 .xlsx 파일을 쓸 때 내부적으로 사용한다
+
+# --- 설정 ---
+python-dotenv      # .env 파일에 적어둔 DB 접속 정보를 읽는다 (코드에 하드코딩 금지)
+pydantic-settings  # .env 값을 타입이 검증된 설정 객체로 바꿔준다
