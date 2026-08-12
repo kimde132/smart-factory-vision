@@ -150,6 +150,13 @@ A등급 코드는 사용자가 직접 작성하므로 **주석도 사용자가 �
 
 # 작업 방식
 
+## 세션을 시작할 때
+
+**`docs/status.md`를 먼저 읽는다.** 지금 어디까지 왔고, 다음에 무엇을 하고, 무엇이 막혀 있는지가 거기 있다.
+터미널을 닫으면 대화는 사라지지만 이 파일은 남는다.
+
+**커밋할 때마다 `status.md`를 함께 갱신한다.** 낡은 상태판은 없느니만 못하다.
+
 ## 한 번에 하나
 
 ```
@@ -177,6 +184,7 @@ A등급 코드는 사용자가 직접 작성하므로 **주석도 사용자가 �
 
 | 문서 | 작성 |
 |---|---|
+| `docs/status.md` | Claude — 진행 상황·다음 할 일·막혀 있는 것. **커밋마다 갱신** |
 | `docs/setup-log.md` | Claude |
 | `docs/foundations.md` | Claude — 기반 지식 해설. 사용자가 요청하면 갱신·보강한다 |
 | `docs/decisions.md` | **사용자** — Claude는 첨삭만 |
@@ -224,6 +232,7 @@ smart-factory-vision-inspection/
 ├── README.md
 ├── .gitignore
 ├── docs/
+│   ├── status.md           # 진행 상황 — 세션 시작 시 먼저 읽는다
 │   ├── work-grades.md      # A/B/C 등급표
 │   ├── foundations.md      # 기반 지식 — 각 기술이 무엇이고 어떻게 연결되는가
 │   ├── decisions.md
