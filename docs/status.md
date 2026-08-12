@@ -141,7 +141,6 @@
 
 | 문서 | 작성 | 언제 필요한가 |
 |---|---|---|
-| `docs/daily-log.md` | **사용자** | 언제든 |
 | `docs/experiment-log.md` | **사용자** | 첫 학습(#17) 시작할 때 |
 | `docs/questions.md` | **사용자** | 언제든 |
 | `README.md` | Claude | 프로젝트 마무리 단계 |
