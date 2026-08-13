@@ -190,7 +190,7 @@ A등급 코드는 사용자가 직접 작성하므로 **주석도 사용자가 �
 | `docs/decisions.md` | **사용자** — Claude는 첨삭만 |
 | `docs/labeling-guide.md` | **사용자** — Claude는 첨삭만 |
 | `docs/experiment-log.md` | **사용자** — Claude는 첨삭만 |
-| `docs/daily-log.md` | **사용자** |
+| `docs/daily-log.md` | **칸별로 나눔** — "한 일"과 "환경·설정 변경"은 Claude가 커밋 이력·결정 기록에서 초안을 만들고 사용자가 확인·보충한다. "막힌 것", "다음에 이어서", "메모"는 **사용자만** 쓴다 (대화에만 있는 내용이라 복원되지 않는다) |
 | `README.md` | Claude, 단 갱신 시 전체 파일을 통째로 제공 |
 
 **A등급 문서를 Claude가 대신 쓰지 않는다.** 첨삭할 때는 근거가 약한 부분,
