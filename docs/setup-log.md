@@ -238,6 +238,19 @@ SQL Server 설치에 쓴 매체(`C:\Users\kimde\sqlmedia`, 압축본 1.2GB + 압
 설치와 동작 확인이 끝난 뒤 삭제했다. C: 여유 공간 589.1 GB → 591.5 GB.
 재설치가 필요하면 `SQL2022-SSEI-Dev.exe`를 다시 받으면 된다.
 
+## 추가. 촬영 메타데이터 폴더 (`metadata/`) — 2026-08-18
+
+```powershell
+# 폴더와 파일 3개 생성 (헤더 한 줄씩)
+metadata/sessions.csv    # session_id,camera_angle,camera_height_cm,frame_width_cm,device,lighting,tray,date
+metadata/images.csv      # image_name,bolt_count,nut_count,washer_count,layout
+metadata/README.md       # 두 파일의 역할·컬럼 뜻·적는 방법
+```
+
+- **왜 필요했나:** work-grades #15 촬영 메타데이터를 기록할 곳. 컬럼은 D-009 6절에서 사용자가 확정했고, 폴더·헤더 생성만 C등급으로 처리했다.
+- **왜 `dataset/` 밖인가:** `.gitignore`가 `dataset/`을 통째로 제외한다. CSV는 실패 분석(#21)의 유일한 근거라 git에 남아야 한다.
+- **막힌 것:** 없음.
+
 ## 오늘 하지 않은 것 (의도적)
 
 | 항목 | 이유 |
