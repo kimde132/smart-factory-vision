@@ -1,1 +1,2 @@
-session_id,camera_angle,camera_height_cm,frame_width_cm,device,lighting,tray,date
+session_id,camera_angle,camera_height_cm,frame_width_cm,mount,device,lighting,tray,date
+s01,top,22,22,hand,iphone15pro_wide,indoor_back,wood_29x20,2026-08-18
