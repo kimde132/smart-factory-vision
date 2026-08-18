@@ -251,6 +251,22 @@ metadata/README.md       # 두 파일의 역할·컬럼 뜻·적는 방법
 - **왜 `dataset/` 밖인가:** `.gitignore`가 `dataset/`을 통째로 제외한다. CSV는 실패 분석(#21)의 유일한 근거라 git에 남아야 한다.
 - **막힌 것:** 없음.
 
+## 추가. `dataset/` 폴더 + 이름 변경 스크립트 — 2026-08-19
+
+```powershell
+# D-009 Q17 구조 그대로 생성
+dataset/{origin,rename}, dataset/result_data/{images,labels}/{train,val,test}
+
+# 미리보기 → 실제 복사
+ai-server\.venv\Scripts\python.exe scripts\rename_session.py s01
+ai-server\.venv\Scripts\python.exe scripts\rename_session.py s01 --apply
+```
+
+- **왜 필요했나:** s01 35장의 카메라 파일명(`IMG_E8821.JPG`)을 규칙(`s01_001.jpg`)으로 바꿔야 라벨링에 넣을 수 있다. D-009 Q22에서 스크립트로 하기로, 등급은 C로 정했다.
+- **왜 파일 시각이 아니라 EXIF인가:** 파일 수정 시각은 PC로 옮기는 순간 "옮긴 시각"으로 바뀐다. EXIF 촬영 시각은 사진 안에 있어 복사해도 그대로다.
+- **막힌 것:** 첫 실행이 `UnicodeEncodeError`로 죽었다. 윈도우 콘솔 CP949가 em dash(—)를 출력하지 못했다.
+- **해결:** 출력 문자를 바꾸고 `sys.stdout.reconfigure(errors="replace")` 추가. `scripts/` 폴더는 이때 새로 만들었다(계획 구조에 없던 것).
+
 ## 오늘 하지 않은 것 (의도적)
 
 | 항목 | 이유 |
