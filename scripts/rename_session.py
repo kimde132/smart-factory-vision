@@ -32,10 +32,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 import argparse  # 명령줄 인자(s01, --apply)를 받아 파싱해주는 표준 라이브러리
-import csv       # metadata/images.csv 를 읽는다. 쉼표 분리를 직접 짜면 값 안의 쉼표에서 깨진다
-import shutil    # 파일 복사(shutil.copy2). copy2 는 내용뿐 아니라 수정 시각까지 함께 복사한다
-import sys       # 오류가 났을 때 종료 코드 1로 빠져나가기 위해 사용 (sys.exit)
-from pathlib import Path  # 경로를 문자열이 아니라 객체로 다룬다. 윈도우 역슬래시를 신경 쓰지 않아도 된다
+import csv  # metadata/images.csv 를 읽는다. 쉼표 분리를 직접 짜면 값 안의 쉼표에서 깨진다
+import shutil  # 파일 복사(shutil.copy2). copy2 는 내용뿐 아니라 수정 시각까지 함께 복사한다
+import sys  # 오류가 났을 때 종료 코드 1로 빠져나가기 위해 사용 (sys.exit)
+from pathlib import (
+    Path,
+)  # 경로를 문자열이 아니라 객체로 다룬다. 윈도우 역슬래시를 신경 쓰지 않아도 된다
 
 from PIL import Image, ExifTags  # Pillow. 이미지 열기와 EXIF 태그 이름표를 제공한다
 
@@ -50,8 +52,8 @@ sys.stdout.reconfigure(errors="replace")
 # .parent 를 두 번 올라가면 프로젝트 루트다 (scripts/rename_session.py → scripts → 루트).
 # 이렇게 하면 어느 폴더에서 실행해도 경로가 어긋나지 않는다.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-ORIGIN_DIR = PROJECT_ROOT / "dataset" / "origin"   # 카메라에서 꺼낸 원본이 있는 곳
-RENAME_DIR = PROJECT_ROOT / "dataset" / "rename"   # 규칙대로 이름을 바꾼 사본이 놓일 곳
+ORIGIN_DIR = PROJECT_ROOT / "dataset" / "origin"  # 카메라에서 꺼낸 원본이 있는 곳
+RENAME_DIR = PROJECT_ROOT / "dataset" / "rename"  # 규칙대로 이름을 바꾼 사본이 놓일 곳
 IMAGES_CSV = PROJECT_ROOT / "metadata" / "images.csv"  # 사진당 1행짜리 계획표
 
 # 처리 대상 확장자. 대소문자를 섞어 쓰는 카메라가 있어 소문자로 비교한다.
@@ -172,7 +174,11 @@ def collect_origin_images(session_id: str) -> list[Path]:
     # iterdir(): 폴더 안의 항목을 하나씩 돌려준다.
     # p.suffix 는 확장자(".JPG"), .lower() 로 소문자로 만들어 대소문자 차이를 없앤다.
     # p.is_file() 로 하위 폴더는 걸러낸다.
-    files = [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_SUFFIXES]
+    files = [
+        p
+        for p in folder.iterdir()
+        if p.is_file() and p.suffix.lower() in IMAGE_SUFFIXES
+    ]
 
     if not files:
         raise FileNotFoundError(f"{folder} 안에 이미지 파일이 없습니다.")
@@ -248,8 +254,11 @@ def main() -> int:
     # action="store_true": 값을 받지 않고 붙었는지 여부만 True/False 로 준다.
     # 기본을 미리보기로 둔 이유는, 잘못된 매핑으로 35개 파일을 만들어 놓고
     # 나중에 알아채는 것보다 먼저 눈으로 보는 편이 훨씬 싸기 때문이다.
-    parser.add_argument("--apply", action="store_true",
-                        help="실제로 복사한다. 붙이지 않으면 무엇을 할지 출력만 한다")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="실제로 복사한다. 붙이지 않으면 무엇을 할지 출력만 한다",
+    )
     args = parser.parse_args()
 
     # try/except: 위 함수들이 낸 오류를 잡아서 파이썬 기본 오류 화면(Traceback) 대신
@@ -276,12 +285,16 @@ def main() -> int:
     print(f"{'새 이름':<16} {'원본':<18} {'볼트':>4} {'너트':>4} {'와셔':>4}  배치")
     print("-" * 62)
     for src, new_name, row in mapping:
-        print(f"{new_name:<16} {src.name:<18} "
-              f"{row['bolt_count']:>4} {row['nut_count']:>4} {row['washer_count']:>4}  {row['layout']}")
+        print(
+            f"{new_name:<16} {src.name:<18} "
+            f"{row['bolt_count']:>4} {row['nut_count']:>4} {row['washer_count']:>4}  {row['layout']}"
+        )
 
     if not args.apply:
         print("\n위 짝이 맞으면 --apply 를 붙여 다시 실행하세요.")
-        print(f"  ai-server\\.venv\\Scripts\\python.exe scripts\\rename_session.py {args.session_id} --apply\n")
+        print(
+            f"  ai-server\\.venv\\Scripts\\python.exe scripts\\rename_session.py {args.session_id} --apply\n"
+        )
         return 0
 
     # mkdir(parents=True): 중간 폴더가 없으면 같이 만든다.
