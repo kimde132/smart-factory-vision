@@ -176,6 +176,62 @@ py -3.13 -m venv .venv-labelstudio
 - 프로젝트 생성과 라벨링 규칙 설정은 하지 않았다. ~~**A등급(11·12번)이라 사용자가 직접 한다.**~~
 - **2026-08-23에 바꿨다** — 도구 세팅(실행·프로젝트 생성·클래스 등록·이미지 불러오기)은 **C등급으로 Claude가 하고 사용자는 보면서 익힌다.** 사용자 요청이다: *"나도 뭔지도 모르고 어떻게 하는건지 몰라서 너 하는거 좀 보면서 공부도 해야할 것 같다."* **박스를 그리는 것부터(#12)는 그대로 A등급**이라 사용자가 직접 한다. 도구 조작과 라벨링 판단을 나눈 것이다.
 
+### 5-1. 프로젝트 세팅 — 2026-08-24
+
+```powershell
+.\scripts\start_labelstudio.ps1        # 서버 실행. 앞으로 라벨링할 때마다 이것만 실행한다
+# 브라우저 http://localhost:8080 → 회원가입 → Create Project → Labeling Setup 에 XML 붙여넣기
+# → Settings → Cloud Storage → Add Source Storage (Local files) → Sync
+```
+
+- **왜:** #12 라벨링 실작업의 입력 준비. s01 35장을 도구에 물리고 클래스 3개를 등록했다.
+- **왜 스크립트를 만들었나:** 설정을 환경 변수로 넘기는데, 환경 변수는 **그 프로세스에만** 붙는다. 다음에 그냥 `label-studio start`로 켜면 로컬 파일 서빙이 꺼져서 **사진이 전부 깨져 보이고 원인을 찾기 어렵다.** `.ps1`은 UTF-8 **BOM 포함**으로 저장했다(3-2 실패 #2와 같은 CP949 문제 방지). 저장 후 `[Parser]::ParseFile`로 구문 검사를 통과시켰다.
+
+**설정한 값**
+
+| 항목 | 값 | 이유 |
+|---|---|---|
+| 라벨링 설정 | `RectangleLabels` — `bolt` → `nut` → `washer` 순 | **XML의 라벨 순서가 그대로 클래스 번호(0/1/2)가 된다.** 클릭으로 3개를 넣는 것보다 순서를 눈으로 확인할 수 있다 |
+| `hotkey="1,2,3"` | 숫자키 단축키 | 350장을 마우스로만 고를 수 없다. **번호(0,1,2)와 무관한 별개 개념** |
+| `zoom`·`zoomControl` | 켬 | 너트/와셔 외곽선(육각 vs 원) 판별에 확대가 필수 |
+| `rotateControl` | 끔 | 탑뷰 고정. 잘못 눌러 회전하면 박스가 틀어진다 |
+| 스토리지 종류 | `Local files` | 업로드하면 사진 350장이 Label Studio 폴더에 **한 벌 더 복사된다.** 원본을 `dataset/rename/` 하나로 유지 |
+| 경로 | `dataset\rename` + `Scan all sub-folders` ON | 하위를 훑으므로 s02~s10을 찍어도 **`Sync` 한 번**이면 추가된다. 세션마다 스토리지를 새로 만들 필요가 없다 |
+| Import method | `Files` | `Tasks`(JSON)로 두면 JPG를 JSON으로 파싱하려다 0장이 들어온다 |
+| File Filter Regex | `.*\.jpg` | 같은 폴더의 `_rename_map.csv`가 라벨링 대상으로 끌려오는 것을 막는다 |
+
+**막힌 것과 해결**
+
+| # | 증상 | 원인 | 해결 |
+|---|---|---|---|
+| 1 | 스토리지 경로 저장 시 `cannot be the same as LOCAL_FILES_DOCUMENT_ROOT ... Please add a subdirectory` | 울타리(document root)와 스토리지 경로가 **똑같으면 거부**한다. 울타리가 곧 대상이면 울타리 역할을 못 하므로 | 울타리를 한 칸 위 `dataset`로 옮기고 서버 재시작. 스토리지 경로는 `dataset\rename` 유지 → 한 칸 차이 확보 |
+| 2 | 스크립트에서 `SECRET_KEY`를 직접 만들어 넘겼더니 열쇠가 두 개가 됨 | **Label Studio가 이미 스스로 처리하고 있었다.** 첫 실행 때 만들어 `%LOCALAPPDATA%\label-studio\label-studio\.env`에 저장하고 이후 재사용한다. 첫 실행 로그의 `Will generate a random key` 경고를 "매번 그런다"고 잘못 읽은 것 | 스크립트에서 해당 블록 삭제, `.secret_key` 파일 제거. **도구가 이미 하는 일인지 먼저 확인할 것** |
+| 3 | 만든 `.ps1`을 사용자가 직접 실행하면 *"이 시스템에서 스크립트를 실행할 수 없으므로..."* 로 막힌다 | Windows 기본 **실행 정책이 `Restricted`**(스크립트 실행 전면 금지). Claude가 실행할 때는 도구가 `Process` 범위를 `Bypass`로 띄워서 통과했을 뿐이라 **증상이 드러나지 않았다** | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (1회). 내가 만든 로컬 스크립트는 허용, 인터넷에서 받은 것은 서명 필요. `-Scope CurrentUser`라 관리자 권한 불필요. 새 창에서 `RemoteSigned`로 나오는 것과 스크립트에 Zone.Identifier(인터넷 표식)가 없는 것을 확인했다 |
+
+**검증** — YOLO 형식으로 내보내 파일로 확인했다. 눈대중이 아니라 증거를 남긴다.
+
+```
+classes.txt              notes.json
+──────────               ─────────────────────────
+bolt      ← 0번          { "id": 0, "name": "bolt"   }
+nut       ← 1번          { "id": 1, "name": "nut"    }
+washer    ← 2번          { "id": 2, "name": "washer" }
+```
+
+`labeling-guide.md` 1-1 표와 일치. status.md의 ⭐ 리스크는 여기서 닫혔다.
+
+**⚠️ 이때 발견한 것 — 라벨 파일명은 규칙대로 나오지 않는다**
+
+```
+labels/9599f483__rename%5Cs01%5Cs01_001.txt      ← 기대: s01_001.txt
+```
+
+로컬 폴더 연결을 고른 이유 중 하나가 "업로드하면 파일명 앞에 해시가 붙는다"였는데, **로컬 연결도 붙는다.** `9599f483__`는 중복 방지 해시, `%5C`는 역슬래시를 URL 문자로 바꾼 것이라 폴더 경로가 이름에 통째로 들어간다. 다만 **원래 이름이 그 안에 그대로 있어** 되돌리는 것은 기계적으로 가능하다.
+
+되돌리는 곳은 **#14 분할 스크립트**다. 어차피 라벨을 `result_data/labels/{train,val,test}/`로 옮기며 사진과 짝을 맞춰야 하므로 그때 정규화한다. 새 스크립트를 만들지 않는다. (로컬 연결 선택 자체는 유지 — 사진 중복 복사가 없고 세션 추가가 `Sync` 한 번이라는 이유는 그대로 유효하다.)
+
+> `images/` 폴더는 비어 있다. 로컬 연결이라 Label Studio가 사진 원본을 갖고 있지 않아서이며 정상이다. 사진은 `dataset/rename/`에 있다.
+
 ## 6. .NET SDK + WPF 빈 프로젝트
 
 ```powershell
