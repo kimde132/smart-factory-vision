@@ -52,7 +52,7 @@
 | `frame_width_cm` | 사진에 담긴 가로 폭 (cm). **31 초과면 D-007을 다시 본다** | `20` |
 | `mount` | 카메라를 어떻게 고정했나 | `hand` / `tripod` |
 | `device` | 촬영 기기 | `iphone15pro_wide` / `razer_kiyo_x` |
-| `lighting` | 조명 조건 | `indoor_back` |
+| `lighting` | 조명 조건 (조명 계획은 D-007 2절) | `ceiling` / `ceiling_stand_back` / `stand_back` / `ceiling_stand_side` |
 | `tray` | 트레이 겸 배경 | `wood_29x20` |
 | `date` | 촬영 날짜 | `2026-08-18` |
 
