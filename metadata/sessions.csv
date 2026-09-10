@@ -1,3 +1,7 @@
-session_id,camera_angle,camera_height_cm,frame_width_cm,mount,device,lighting,tray,date
-s01,top,22,23.2,hand,iphone15pro_wide,ceiling,wood_29x20,2026-08-18
-s02,top,24.5,20,tripod,razer_kiyo_x,ceiling,wood_29x20,2026-09-09
+session_id,camera_angle,camera_height_cm,frame_width_cm,mount,device,lighting,tray,date,stand_level
+s01,top,22,23.2,hand,iphone15pro_wide,ceiling,wood_29x20,2026-08-18,none
+s02,top,24.5,20,tripod,razer_kiyo_x,ceiling,wood_29x20,2026-09-09,none
+s03,top,24.5,20,tripod,razer_kiyo_x,ceiling_stand_back,wood_29x20,2026-09-11,high
+s04,top,24.5,20,tripod,razer_kiyo_x,stand_back,wood_29x20,2026-09-11,low
+s05,top,24.5,20,tripod,razer_kiyo_x,ceiling_stand_side,wood_29x20,2026-09-11,low
+s06,top,20,20,tripod,iphone15pro_wide,stand_back,wood_29x20,2026-09-11,
