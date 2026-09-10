@@ -52,7 +52,7 @@
 | `frame_width_cm` | 사진에 담긴 가로 폭 (cm). **31 초과면 D-007을 다시 본다** | `20` |
 | `mount` | 카메라를 어떻게 고정했나 | `hand` / `tripod` |
 | `device` | 촬영 기기 | `iphone15pro_wide` / `razer_kiyo_x` |
-| `lighting` | 조명 조건 (조명 계획은 D-007 2절) | `ceiling` / `ceiling_stand_back` / `stand_back` / `ceiling_stand_side` |
+| `lighting` | 조명 조건 (조명 계획은 D-007 2절). `indirect`는 천장등·스탠드 없이 **모니터와 캔들워머 불빛만** 있던 s06 | `ceiling` / `ceiling_stand_back` / `stand_back` / `ceiling_stand_side` / `indirect` |
 | `tray` | 트레이 겸 배경 | `wood_29x20` |
 | `date` | 촬영 날짜 (EXIF 기준. 자정을 넘겨 찍었으면 넘긴 날짜) | `2026-08-18` |
 | `stand_level` | 스탠드 밝기 단계. 스탠드를 안 쓴 세션은 `none` | `none` / `high` / `low` |
@@ -71,7 +71,7 @@ D-009 Q19의 컬럼 목록에는 없었다 — 그때는 거치 기구를 구할
 
 `stand_level`은 2026-09-11에 추가한 컬럼이다. s03 촬영 직전에 스탠드가 **밝기 조절이 된다**는 것을 확인했고,
 `lighting`만으로는 "스탠드를 켰다"까지만 남고 얼마나 밝게 켰는지가 사라지기 때문이다.
-s03은 `high`, s04·s05는 `low`. 스탠드 거리는 자로 재지 않아 컬럼으로 두지 않고 `daily-log.md` 9/11에 추정값만 남겼다.
+s03은 `high`, s04·s05는 `low`, s06은 스탠드를 안 켜서 `none`. 스탠드 거리는 자로 재지 않아 컬럼으로 두지 않고 `daily-log.md` 9/11에 추정값만 남겼다.
 
 이 컬럼이 없으면 나중에 성능 차이를 보고 "삼각대 전후로 뭐가 달라졌나"를 물을 때,
 CSV가 아니라 일지를 뒤져야 한다. 세션마다 반드시 둘 중 하나로 정해지는 값이라 컬럼에 맞는다.
