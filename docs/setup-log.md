@@ -232,6 +232,18 @@ labels/9599f483__rename%5Cs01%5Cs01_001.txt      ← 기대: s01_001.txt
 
 > `images/` 폴더는 비어 있다. 로컬 연결이라 Label Studio가 사진 원본을 갖고 있지 않아서이며 정상이다. 사진은 `dataset/rename/`에 있다.
 
+### 5-2. Smart App Control이 `label-studio.exe`를 차단 — 2026-09-10
+
+```powershell
+# 바꾸기 전 : & $labelStudio start --port 8080            (.venv-labelstudio\Scripts\label-studio.exe)
+# 바꾼 뒤   : & $python -c "from label_studio.server import main; main()" start --port 8080
+```
+
+- **증상:** `.\scripts\start_labelstudio.ps1` 실행 시 *"'label-studio.exe' 프로그램을 실행하지 못했습니다. 애플리케이션 제어 정책에서 이 파일을 차단했습니다"*. 8/24~9/6에는 같은 스크립트가 잘 돌았다.
+- **원인:** Windows 11 **Smart App Control**(서명 없는 프로그램을 막는 기능)이 켜져 있다(`VerifiedAndReputablePolicyState = 1`, 이벤트 로그 3118 "Smart App Control Block"). `label-studio.exe`는 pip가 만든 실행기라 서명이 없고, 같은 폴더의 `python.exe`는 Python Software Foundation 서명이 있어 통과한다. 왜 오늘부터 막는지는 확인하지 못했다 *(추정: 평가 모드에서 켜짐으로 자동 전환)*.
+- **해결:** 스크립트가 `python.exe`로 `label_studio.server:main`(= `label-studio.exe`가 부르는 함수. `importlib.metadata`의 entry point로 확인)을 직접 호출하게 바꿨다. Smart App Control은 끄지 않았다 — **한 번 끄면 Windows 재설치 전에는 다시 못 켠다.**
+- **검증:** 별도 PowerShell 창을 `-ExecutionPolicy RemoteSigned`로 띄워(사용자와 같은 조건) 스크립트 실행 → 6초 뒤 `http://localhost:8080` **HTTP 200**. 확인 후 종료했다.
+
 ## 6. .NET SDK + WPF 빈 프로젝트
 
 ```powershell

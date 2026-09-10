@@ -3,11 +3,12 @@
 #
 # [이 파일은 무엇을 하는가]
 #   Label Studio 서버를 항상 똑같은 설정으로 켠다.
-#   설정 세 가지를 환경 변수로 넘긴 뒤 label-studio.exe 를 실행한다.
+#   설정 세 가지를 환경 변수로 넘긴 뒤 가상환경의 python.exe 로 Label Studio 를 실행한다.
+#   (2026-09-10 까지는 label-studio.exe 를 썼다. 바꾼 이유는 아래 3번 주석)
 #
 # [실행 흐름에서 어느 위치인가]
 #   누가 호출하나   : 사람. 라벨링 작업(work-grades #12)을 시작할 때마다 직접 실행한다.
-#   무엇을 호출하나 : .venv-labelstudio\Scripts\label-studio.exe
+#   무엇을 호출하나 : .venv-labelstudio\Scripts\python.exe (label_studio.server 의 main 함수)
 #   이 서버가 뜬 뒤 브라우저로 http://localhost:8080 에 접속해서 라벨링한다.
 #
 # [이 파일을 이해하기 전에 알아야 할 개념]
@@ -47,12 +48,18 @@ $env:LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT = Join-Path $projectRoot "dataset"
 #   Label Studio 는 첫 실행 때 이 값을 스스로 만들어
 #   %LOCALAPPDATA%\label-studio\label-studio\.env 에 저장해두고 이후 계속 재사용한다.
 #   여기서 따로 넘기면 열쇠가 두 개가 되어 어느 쪽이 이기는지 애매해지므로 넘기지 않는다.
-$labelStudio = Join-Path $projectRoot ".venv-labelstudio\Scripts\label-studio.exe"
+#
+# 2026-09-10 변경 : label-studio.exe 대신 python.exe 로 띄운다.
+#   label-studio.exe 는 pip 가 만든 "실행기"일 뿐이고, 실제 일은 label_studio.server 의 main() 이 한다.
+#   이 실행기는 서명이 없어서 Windows 11 의 Smart App Control(서명 없는 프로그램을 막는 기능)이 차단한다.
+#   가상환경의 python.exe 는 Python Software Foundation 서명이 있어 통과하므로,
+#   python.exe 가 main() 을 직접 부르게 한다. 하는 일은 label-studio.exe 와 완전히 같다.
+$python = Join-Path $projectRoot ".venv-labelstudio\Scripts\python.exe"
 
-if (-not (Test-Path $labelStudio)) {
+if (-not (Test-Path $python)) {
     # exit 1 까지 하는 이유 : 종료 코드 1 을 남겨야 나중에 다른 스크립트가 이것을 호출했을 때
     # 실패했다는 것을 알아챌 수 있다. 0 은 성공, 0 이 아니면 실패라는 것이 공통 약속이다.
-    Write-Error "label-studio.exe 를 찾을 수 없습니다 : $labelStudio"
+    Write-Error "가상환경의 python.exe 를 찾을 수 없습니다 : $python"
     Write-Error "가상환경이 없다면 docs/setup-log.md 5번을 보고 다시 만드세요."
     exit 1
 }
@@ -65,5 +72,7 @@ Write-Host "  끄기           : 이 창에서 Ctrl + C"
 Write-Host ""
 
 # & : 호출 연산자(call operator). 경로가 담긴 변수를 실행 파일로 돌릴 때 필요하다.
-# & 없이 $labelStudio 만 쓰면 PowerShell 은 그것을 "문자열"로 보고 화면에 출력만 한다.
-& $labelStudio start --port 8080
+# & 없이 $python 만 쓰면 PowerShell 은 그것을 "문자열"로 보고 화면에 출력만 한다.
+# -c "..." : 따옴표 안의 파이썬 코드를 파일 없이 바로 실행한다.
+#   main() 은 뒤에 붙은 인자(start --port 8080)를 그대로 읽으므로 label-studio.exe start --port 8080 과 같다.
+& $python -c "from label_studio.server import main; main()" start --port 8080
