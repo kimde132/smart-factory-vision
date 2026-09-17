@@ -244,6 +244,18 @@ labels/9599f483__rename%5Cs01%5Cs01_001.txt      ← 기대: s01_001.txt
 - **해결:** 스크립트가 `python.exe`로 `label_studio.server:main`(= `label-studio.exe`가 부르는 함수. `importlib.metadata`의 entry point로 확인)을 직접 호출하게 바꿨다. Smart App Control은 끄지 않았다 — **한 번 끄면 Windows 재설치 전에는 다시 못 켠다.**
 - **검증:** 별도 PowerShell 창을 `-ExecutionPolicy RemoteSigned`로 띄워(사용자와 같은 조건) 스크립트 실행 → 6초 뒤 `http://localhost:8080` **HTTP 200**. 확인 후 종료했다.
 
+### 5-3. Smart App Control이 torchvision `_C.pyd`를 차단 → `scripts/torchvision_shim.py` — 2026-09-18
+
+```powershell
+ai-server\.venv\Scripts\python.exe -m pip install "ultralytics==8.4.150"   # Colab과 동일 버전으로 (차단과 무관, 재현성)
+# 추론 스크립트 맨 위:  import torchvision_shim   ← from ultralytics import YOLO 보다 먼저
+```
+
+- **증상:** 노트북에서 `best.pt` 추론 시 `RuntimeError: operator torchvision::nms does not exist`. `ctypes.CDLL(_C.pyd)` → `WinError 4551 애플리케이션 제어 정책에서 이 파일을 차단`. Code Integrity 이벤트 3077에 `torchvision\_C.pyd`가 찍혀 있다(최근 2주 차단 목록: ruff.exe, pip.exe, label-studio.exe, torchvision `_C.pyd` 4개).
+- **원인:** 5-2와 동일. torchvision의 C++ 확장 `_C.pyd`가 서명이 없다. torch 자체 DLL은 통과한다. ultralytics는 추론 준비(`AutoBackend.warmup`)에서 `import torchvision`을 무조건 실행해 그 한 줄에서 죽는다. 8.4.150도 같다.
+- **해결:** ultralytics가 이미 갖고 있는 순수 PyTorch NMS(`ultralytics.utils.nms.TorchNMS.nms`)를 `torchvision.ops.nms` 자리에 꽂은 가짜 모듈을 `sys.modules`에 먼저 등록한다(`scripts/torchvision_shim.py`). Smart App Control은 끄지 않았다(5-2와 같은 이유).
+- **검증:** `s04_035.jpg` CPU 추론 0.14초, 18박스 6/6/6 정답, conf 0.85~0.98. 잠금 파일 `ultralytics==8.4.150`으로 갱신.
+
 ## 6. .NET SDK + WPF 빈 프로젝트
 
 ```powershell
