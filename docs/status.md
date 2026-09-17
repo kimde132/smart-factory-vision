@@ -5,7 +5,7 @@
 > 작성: Claude — **커밋할 때마다 함께 갱신한다.** 낡은 상태판은 없느니만 못하다.
 > 판단과 근거는 여기 쓰지 않는다. `decisions.md`가 담당한다. 이 파일은 **포인터**다.
 >
-> 최종 갱신: **2026-09-18** (**#19 EXP-01 해석 완료.** 다음은 #20 추론·개수 스크립트 → test(s05) 한 번 → s07 어려운 조건 촬영)
+> 최종 갱신: **2026-09-18** (#19 완료. **Smart App Control 끄는 중 — 아래 🔴 재개 절차부터.** 그다음 #20)
 
 ---
 
@@ -47,7 +47,20 @@
 - [x] ~~**3. `verify_counts.py`**~~ ✅ **완료 9/10. `검사완료 이상 없음` — s02 어긋남 0건.** s01은 16장이 틀렸었다. **D-012 대책이 통했다.** export는 `project-1-at-2026-09-10-20-19-...`(70개, s01 포함)
 - [x] ~~스탠드 **밝기 조절이 되는지 확인**~~ ✅ **된다(9/11).** `sessions.csv`에 `stand_level` 열 추가 — s03 `high`, s04·s05 `low`, s06 `none`
 
-### 🔴 지금 할 일 — 2차 학습 (첫 정식 실험)
+### 🔴 재개 절차 — Smart App Control을 끈 뒤 (2026-09-18 저녁, 터미널 닫기 전 기록)
+
+> **상황.** 노트북에서 `best.pt` 추론이 `operator torchvision::nms does not exist`로 죽었다. 원인은 9/10과 같은 **Smart App Control**이
+> torchvision의 `_C.pyd`(서명 없음)를 차단한 것(`setup-log.md` 5-3). 우회로 `scripts/torchvision_shim.py`를 만들어 추론은 됐지만(커밋 `072f013`),
+> 사용자가 **"계속 걸릴 테니 끄겠다"**고 결정했다. 끄면 우회가 필요 없어지므로 **정석으로 되돌린다.**
+> 대화가 끊겼으면 `claude --continue` 로 직전 대화를 이어갈 수 있다. 안 되면 아래 순서대로.
+
+- [ ] **(사용자)** 설정 → 개인 정보 및 보안 → Windows 보안 → 앱 및 브라우저 컨트롤 → 스마트 앱 컨트롤 설정 → **끔**. 터미널 새로 열기
+- [ ] **(Claude) 확인** — `ai-server\.venv\Scripts\python.exe -c "import torchvision; print(torchvision.ops.nms)"` 가 에러 없이 나오면 통과. 그리고 우회 없이 `best.pt`로 `s04_035.jpg` 추론 → 6/6/6
+- [ ] **(Claude) 우회 폐기** — `scripts/torchvision_shim.py` 삭제. `setup-log.md` 5-3에 "9/18 SAC 끔 → 우회 폐기" 한 줄. `start_labelstudio.ps1`은 그대로 둔다(python.exe 방식도 정상이라 건드릴 이유 없음). 커밋
+- [ ] **#20 `scripts/predict_count.py`** — 코드 가이드는 **`docs/reference/20_predict_count_가이드.md`** (대화 대신 파일로 남김. SAC를 껐으면 `torchvision_shim` import 줄은 넣지 않는다). 사용자가 타이핑 → 실행 결과를 Claude에게 → 주석 → 커밋. 완성되면 가이드 문서는 지운다
+- [ ] `predict_count.py`를 val에 `--conf 0.25 / 0.4 / 0.6`으로 돌려 개수 정답률 비교 → `experiment-log.md` EXP-01 3절 "정확한 장수" 채우기
+
+### 🔴 그다음 — test(s05) → #21 → s07
 
 > **⚠️ 9/13부터 원서 작성 병행.** 사용자 요청으로 A등급 코드도 *"Claude가 어떻게·왜를 설명하고 코드를 보여주면 사용자가 따라 치며 이해"* 방식으로 간다.
 > D-001 뒤집는 조건 적용. 깊은 이해는 원서 뒤·면접 전. **AI 파트(#14 → 2차 학습 → #19 → #20 → #21) 완주가 최우선.**
