@@ -36,7 +36,7 @@ CLASS_NAMES = ("bolt", "nut", "washer")
 IMAGE_SUFFIXES = {".jpg", ".jpeg"}
 ```
 
-- Smart App Control을 **끄지 않았다면** `from ultralytics import YOLO` **위에** `import torchvision_shim  # noqa: F401` 한 줄이 필요하다. 껐으면 필요 없다.
+- (9/18 저녁 Smart App Control을 껐으므로 torchvision 우회는 필요 없다. 위 코드 그대로.)
 - `load_planned_counts`는 `verify_counts.py`의 함수. `images.csv`를 `{사진이름: {'bolt': n, 'nut': n, 'washer': n}}`로 읽어준다.
   예측 결과도 **같은 모양**으로 만들면 `==`로 바로 비교된다. 이것이 설계의 요점이다.
 

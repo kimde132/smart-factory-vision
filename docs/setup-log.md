@@ -255,6 +255,7 @@ ai-server\.venv\Scripts\python.exe -m pip install "ultralytics==8.4.150"   # Col
 - **원인:** 5-2와 동일. torchvision의 C++ 확장 `_C.pyd`가 서명이 없다. torch 자체 DLL은 통과한다. ultralytics는 추론 준비(`AutoBackend.warmup`)에서 `import torchvision`을 무조건 실행해 그 한 줄에서 죽는다. 8.4.150도 같다.
 - **해결:** ultralytics가 이미 갖고 있는 순수 PyTorch NMS(`ultralytics.utils.nms.TorchNMS.nms`)를 `torchvision.ops.nms` 자리에 꽂은 가짜 모듈을 `sys.modules`에 먼저 등록한다(`scripts/torchvision_shim.py`). Smart App Control은 끄지 않았다(5-2와 같은 이유).
 - **검증:** `s04_035.jpg` CPU 추론 0.14초, 18박스 6/6/6 정답, conf 0.85~0.98. 잠금 파일 `ultralytics==8.4.150`으로 갱신.
+- **⭐ 같은 날 저녁, Smart App Control을 껐다(사용자 결정) → 우회 폐기.** 이유: pip.exe·ruff.exe·label-studio.exe·torchvision까지 개발용 파일이 계속 걸리고, 앞으로 FastAPI·pyodbc 등 C 확장이 더 늘어난다. 끄고 나서 `import torchvision` 정상(`0.28.0+cpu`), 우회 없이 `best.pt` 추론 0.15초 6/6/6. `scripts/torchvision_shim.py` 삭제. `start_labelstudio.ps1`은 python.exe 방식이 정상 동작하므로 그대로 둔다. **한 번 끄면 재설치 전엔 못 켠다**는 것을 알고 껐다.
 
 ## 6. .NET SDK + WPF 빈 프로젝트
 
