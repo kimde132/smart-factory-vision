@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 이 파일은 무엇을 하는가
-#   7세션(s01~s07)의 사진과 라벨을 **촬영 세션 단위로** train / val / test 폴더에 복사해 넣는다.
+#   9세션(s01~s09)의 사진과 라벨을 **촬영 세션 단위로** train / val / test 폴더에 복사해 넣는다.
 #   어느 세션이 어느 폴더로 가는지는 아래 SPLIT_OF_SESSION 표 하나로 정해진다.
 #   랜덤으로 섞지 않는다 (docs/decisions.md D-003). 세션을 통째로 val·test에 두어야
 #   "본 적 없는 조명·기기에서도 맞히는가"를 잴 수 있다.
@@ -9,7 +9,7 @@
 #   촬영 → rename_session.py → crop_session.py → 라벨링 → verify_counts.py → [현재 파일] → data.yaml → train.py
 #
 #   앞: dataset/crop/sXX/ (s01만 dataset/rename/s01/) 에 사진이,
-#       dataset/export/<최신 폴더>/labels/ 에 Label Studio가 내보낸 라벨 250개(s07 추가 뒤)가 있어야 한다.
+#       dataset/export/<최신 폴더>/labels/ 에 Label Studio가 내보낸 라벨 320개(s08·s09 추가 뒤)가 있어야 한다.
 #       verify_counts.py 가 "검사완료 이상 없음"을 낸 뒤에 돌린다.
 #   뒤: dataset/result_data/{images,labels}/{train,val,test}/ 가 채워지고,
 #       data.yaml 이 그 폴더를 가리켜 Colab에서 학습한다.
@@ -46,6 +46,7 @@
 
 import argparse  # 명령줄 인자(--apply)를 받아 파싱해주는 표준 라이브러리
 import shutil  # 파일 복사 표준 라이브러리. copy2 는 내용과 수정 시각까지 그대로 복사한다
+
 # 경로를 문자열이 아니라 객체로 다룬다. "/" 로 이어붙이고 .stem, .is_file() 같은 메서드를 쓴다
 from pathlib import Path
 
@@ -59,7 +60,7 @@ from verify_counts import parse_label_filename
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # Label Studio export 폴더가 놓이는 곳 (입력: 라벨)
 EXPORT_DIR = PROJECT_ROOT / "dataset" / "export"
-# 정사각으로 자른 사진 (입력: s02~s07 사진)
+# 정사각으로 자른 사진 (입력: s02~s09 사진)
 CROP_DIR = PROJECT_ROOT / "dataset" / "crop"
 # 이름만 바꾼 사진 (입력: s01 사진. 아이폰이라 이미 정사각이라 crop/ 에 없다)
 RENAME_DIR = PROJECT_ROOT / "dataset" / "rename"
@@ -69,8 +70,11 @@ RESULT_DIR = PROJECT_ROOT / "dataset" / "result_data"
 # ★ 이 표가 D-003 · D-011 그 자체다. 세션 → split 이 고정되어 있고 난수가 어디에도 없다.
 # Train : s01(아이폰) s02(웹캠) s03(웹캠, 천장등+스탠드 강) s06(아이폰, 조명 없음)
 #         s07(웹캠, s04와 같은 조명의 그림자 전용 40장 — EXP-02 에서 추가. val 의 '그림자 안 와셔→너트' 오류를 줄이려는 것)
+#         s08(웹캠, 천장등만, 겹침 17장·가장자리 17장 — EXP-03 에서 추가. 넣기 전에 EXP-02 모델로 채점하니 74.3% 였다)
 # Val   : s04(웹캠, 스탠드 약만) — 학습 중 채점용. 모델이 이것으로 배우지 않는다
-# Test  : s05(웹캠, 천장등+스탠드 측면) — 최종 시험지. 딱 한 번만 쓴다
+# Test  : s05(웹캠, 천장등+스탠드 측면) — EXP-01 에서 이미 한 번 썼다(97.1%). 이후 모델은 s05 로 채점하지 않는다
+#         s09(웹캠, 스탠드 측면만, 배치 4종 섞음) — 최종 시험지. 최종 모델로 딱 한 번만 쓴다 (D-011 8절)
+#         둘이 같은 test 폴더에 들어가지만 학습은 train·val 폴더만 읽으므로 섞이지 않는다. 채점할 때는 파일 이름(s09_)으로 고른다.
 # 새 세션을 찍으면 여기에 한 줄을 더해야 한다. 안 더하면 build_plan 이 멈춘다 (조용히 train 에 섞이지 않게).
 SPLIT_OF_SESSION = {
     "s01": "train",
@@ -80,6 +84,8 @@ SPLIT_OF_SESSION = {
     "s04": "val",
     "s05": "test",
     "s07": "train",
+    "s08": "train",
+    "s09": "test",
 }
 
 
@@ -186,8 +192,8 @@ def build_plan():
 def print_summary(plan):
     """split 별 장수와 세션 목록을 세 줄로 출력한다.
 
-    250 줄을 다 찍어봐야 눈으로 못 본다. 배정이 맞는지는 이 세 줄이면 알 수 있다.
-    기대값: train 180 (s01, s02, s03, s06 각 35 + s07 40) / val 35 (s04) / test 35 (s05)
+    320 줄을 다 찍어봐야 눈으로 못 본다. 배정이 맞는지는 이 세 줄이면 알 수 있다.
+    기대값: train 215 (s01, s02, s03, s06, s08 각 35 + s07 40) / val 35 (s04) / test 70 (s05, s09)
 
     입력:
         plan (list): build_plan 이 돌려준 목록
