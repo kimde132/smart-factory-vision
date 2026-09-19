@@ -52,7 +52,7 @@
 | `frame_width_cm` | 사진에 담긴 가로 폭 (cm). **31 초과면 D-007을 다시 본다** | `20` |
 | `mount` | 카메라를 어떻게 고정했나 | `hand` / `tripod` |
 | `device` | 촬영 기기 | `iphone15pro_wide` / `razer_kiyo_x` |
-| `lighting` | 조명 조건 (조명 계획은 D-007 2절). `indirect`는 천장등·스탠드 없이 **모니터와 캔들워머 불빛만** 있던 s06 | `ceiling` / `ceiling_stand_back` / `stand_back` / `ceiling_stand_side` / `indirect` |
+| `lighting` | 조명 조건 (조명 계획은 D-007 2절). `indirect`는 천장등·스탠드 없이 **모니터와 캔들워머 불빛만** 있던 s06 | `ceiling` / `ceiling_stand_back` / `stand_back` / `ceiling_stand_side` / `stand_side`(s09 — 천장등 끄고 스탠드를 옆에) / `indirect` |
 | `tray` | 트레이 겸 배경 | `wood_29x20` |
 | `date` | 촬영 날짜 (EXIF 기준. 자정을 넘겨 찍었으면 넘긴 날짜) | `2026-08-18` |
 | `stand_level` | 스탠드 밝기 단계. 스탠드를 안 쓴 세션은 `none` | `none` / `high` / `low` |
@@ -84,7 +84,7 @@ CSV가 아니라 일지를 뒤져야 한다. 세션마다 반드시 둘 중 하�
 | `bolt_count` | 놓으려고 **의도한** 볼트 개수 | `3` |
 | `nut_count` | 의도한 너트 개수 | `3` |
 | `washer_count` | 의도한 와셔 개수 | `3` |
-| `layout` | 배치 패턴 — 몰아서 붙여 놓았나 (D-008 5절) | `tight` / `spread` |
+| `layout` | 배치 패턴 — 몰아서 붙여 놓았나 (D-008 5절). s08부터 두 값 추가: `overlap` = 부품끼리 일부러 겹침(가려진 부품도 절반 이상 보이게), `edge` = 검사 영역 끝에 붙임(잘리지 않게). 빈 트레이는 `none` | `tight` / `spread` / `overlap` / `edge` / `none` |
 
 `layout` 값을 `y`/`n`이 아니라 `tight`/`spread`로 둔 이유는, 3주 뒤에 CSV를 열었을 때
 `y`가 "붙여 놓았다"인지 "떨어뜨려 놓았다"인지 기억나지 않기 때문이다. 값 자체가 뜻을 말해야 한다.
