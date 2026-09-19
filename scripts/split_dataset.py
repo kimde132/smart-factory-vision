@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 이 파일은 무엇을 하는가
-#   6세션의 사진과 라벨을 **촬영 세션 단위로** train / val / test 폴더에 복사해 넣는다.
+#   7세션(s01~s07)의 사진과 라벨을 **촬영 세션 단위로** train / val / test 폴더에 복사해 넣는다.
 #   어느 세션이 어느 폴더로 가는지는 아래 SPLIT_OF_SESSION 표 하나로 정해진다.
 #   랜덤으로 섞지 않는다 (docs/decisions.md D-003). 세션을 통째로 val·test에 두어야
 #   "본 적 없는 조명·기기에서도 맞히는가"를 잴 수 있다.
@@ -9,7 +9,7 @@
 #   촬영 → rename_session.py → crop_session.py → 라벨링 → verify_counts.py → [현재 파일] → data.yaml → train.py
 #
 #   앞: dataset/crop/sXX/ (s01만 dataset/rename/s01/) 에 사진이,
-#       dataset/export/<최신 폴더>/labels/ 에 Label Studio가 내보낸 라벨 210개가 있어야 한다.
+#       dataset/export/<최신 폴더>/labels/ 에 Label Studio가 내보낸 라벨 250개(s07 추가 뒤)가 있어야 한다.
 #       verify_counts.py 가 "검사완료 이상 없음"을 낸 뒤에 돌린다.
 #   뒤: dataset/result_data/{images,labels}/{train,val,test}/ 가 채워지고,
 #       data.yaml 이 그 폴더를 가리켜 Colab에서 학습한다.
@@ -40,13 +40,14 @@
 #     ai-server\.venv\Scripts\python.exe scripts\split_dataset.py --apply    ← 실제 복사
 #
 # 관련 문서:
-#   docs/decisions.md D-003 (세션 단위 분할), D-011 (6세션 배정: Train 4 / Val 1 / Test 1),
+#   docs/decisions.md D-003 (세션 단위 분할), D-011 (6세션 배정: Train 4 / Val 1 / Test 1. s07 은 EXP-02 용으로 train 에 추가),
 #   D-007 2절 (세션별 조명·기기 표), data.yaml (이 폴더를 읽는 쪽)
 # ─────────────────────────────────────────────────────────────────────────────
 
 import argparse  # 명령줄 인자(--apply)를 받아 파싱해주는 표준 라이브러리
 import shutil  # 파일 복사 표준 라이브러리. copy2 는 내용과 수정 시각까지 그대로 복사한다
-from pathlib import Path  # 경로를 문자열이 아니라 객체로 다룬다. "/" 로 이어붙이고 .stem, .is_file() 같은 메서드를 쓴다
+# 경로를 문자열이 아니라 객체로 다룬다. "/" 로 이어붙이고 .stem, .is_file() 같은 메서드를 쓴다
+from pathlib import Path
 
 # 같은 scripts/ 폴더의 verify_counts.py 에서 함수를 빌린다.
 # "python scripts\split_dataset.py" 로 실행하면 파이썬이 그 스크립트가 있는 폴더를 먼저 찾아보므로 그냥 된다.
@@ -56,13 +57,18 @@ from verify_counts import parse_label_filename
 # __file__ 은 이 파일의 경로. .resolve() 로 절대경로를 만들고 .parent 를 두 번 올라가면 프로젝트 최상위다.
 # 어느 폴더에서 실행하든 아래 경로가 흔들리지 않게 하려는 것이다.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-EXPORT_DIR = PROJECT_ROOT / "dataset" / "export"  # Label Studio export 폴더가 놓이는 곳 (입력: 라벨)
-CROP_DIR = PROJECT_ROOT / "dataset" / "crop"  # 정사각으로 자른 사진 (입력: s02~s06 사진)
-RENAME_DIR = PROJECT_ROOT / "dataset" / "rename"  # 이름만 바꾼 사진 (입력: s01 사진. 아이폰이라 이미 정사각이라 crop/ 에 없다)
-RESULT_DIR = PROJECT_ROOT / "dataset" / "result_data"  # 분할 결과가 놓이는 곳 (출력). data.yaml 이 여기를 가리킨다
+# Label Studio export 폴더가 놓이는 곳 (입력: 라벨)
+EXPORT_DIR = PROJECT_ROOT / "dataset" / "export"
+# 정사각으로 자른 사진 (입력: s02~s07 사진)
+CROP_DIR = PROJECT_ROOT / "dataset" / "crop"
+# 이름만 바꾼 사진 (입력: s01 사진. 아이폰이라 이미 정사각이라 crop/ 에 없다)
+RENAME_DIR = PROJECT_ROOT / "dataset" / "rename"
+# 분할 결과가 놓이는 곳 (출력). data.yaml 이 여기를 가리킨다
+RESULT_DIR = PROJECT_ROOT / "dataset" / "result_data"
 
 # ★ 이 표가 D-003 · D-011 그 자체다. 세션 → split 이 고정되어 있고 난수가 어디에도 없다.
 # Train : s01(아이폰) s02(웹캠) s03(웹캠, 천장등+스탠드 강) s06(아이폰, 조명 없음)
+#         s07(웹캠, s04와 같은 조명의 그림자 전용 40장 — EXP-02 에서 추가. val 의 '그림자 안 와셔→너트' 오류를 줄이려는 것)
 # Val   : s04(웹캠, 스탠드 약만) — 학습 중 채점용. 모델이 이것으로 배우지 않는다
 # Test  : s05(웹캠, 천장등+스탠드 측면) — 최종 시험지. 딱 한 번만 쓴다
 # 새 세션을 찍으면 여기에 한 줄을 더해야 한다. 안 더하면 build_plan 이 멈춘다 (조용히 train 에 섞이지 않게).
@@ -73,6 +79,7 @@ SPLIT_OF_SESSION = {
     "s06": "train",
     "s04": "val",
     "s05": "test",
+    "s07": "train",
 }
 
 
@@ -164,7 +171,7 @@ def build_plan():
         # .name 은 경로에서 파일명만 뗀 것. 이것을 verify_counts 의 함수에 넘겨 "s02_005" 를 얻는다.
         name = parse_label_filename(label_path.name)
         session_id = name.split("_")[0]
-        # 배정표에 없는 세션은 멈춘다. 나중에 s07 을 찍고 표를 안 고치면
+        # 배정표에 없는 세션은 멈춘다. 새 세션(s08 등)을 찍고 표를 안 고치면
         # 조용히 train 에 섞이는 사고가 나는데, 그것을 막는 한 줄이다.
         if session_id not in SPLIT_OF_SESSION:
             raise ValueError(
@@ -179,8 +186,8 @@ def build_plan():
 def print_summary(plan):
     """split 별 장수와 세션 목록을 세 줄로 출력한다.
 
-    210 줄을 다 찍어봐야 눈으로 못 본다. 배정이 맞는지는 이 세 줄이면 알 수 있다.
-    기대값: train 140 (s01, s02, s03, s06) / val 35 (s04) / test 35 (s05)
+    250 줄을 다 찍어봐야 눈으로 못 본다. 배정이 맞는지는 이 세 줄이면 알 수 있다.
+    기대값: train 180 (s01, s02, s03, s06 각 35 + s07 40) / val 35 (s04) / test 35 (s05)
 
     입력:
         plan (list): build_plan 이 돌려준 목록
