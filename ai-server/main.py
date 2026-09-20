@@ -13,7 +13,7 @@
 #   뒤: 다음 단계에서 판정 결과를 MSSQL 에 저장하는 코드가 이 파일의 inspect() 뒤에 붙는다.
 #
 #   띄우는 법 (ai-server 폴더에서):
-#       .venv\Scripts\uvicorn main:app --reload
+#       .venv/Scripts/uvicorn main:app --reload   (PowerShell 에서도 / 로 된다)
 #     그 뒤 브라우저에서 http://localhost:8000/docs 를 열면 FastAPI 가 만든 시험 화면이 나온다.
 #     사진을 올리고 숫자 세 개를 넣고 Execute 를 누르면 응답이 보인다. WPF 없이도 시험할 수 있다.
 #
@@ -29,19 +29,13 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 import sys  # 파이썬이 import 할 때 뒤지는 폴더 목록(sys.path)을 고치려고 쓴다
-from pathlib import (
-    Path,
-)  # 경로를 문자열이 아니라 객체로 다룬다. "/" 로 이어붙일 수 있다
+# 경로를 문자열이 아니라 객체로 다룬다. "/" 로 이어붙일 수 있다
+from pathlib import Path
 
 import cv2  # OpenCV. 업로드된 사진 바이트를 이미지 배열로 바꾸고(imdecode) 가운데를 자르는 데 쓴다
 import numpy as np  # 사진 바이트를 OpenCV 가 읽을 수 있는 숫자 배열로 감싸는 데 쓴다
-from fastapi import (
-    FastAPI,
-    File,
-    Form,
-    HTTPException,
-    UploadFile,
-)  # 서버 본체, 파일 입력, 글자 입력, 오류 응답, 업로드 파일 타입
+# 서버 본체, 파일 입력, 글자 입력, 오류 응답, 업로드 파일 타입
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from ultralytics import YOLO  # 학습된 best.pt 를 읽어 추론하는 클래스
 
 # __file__ 은 이 파일의 경로. .parent 를 두 번 올라가면 프로젝트 최상위(smart-factory-vision/)다.
@@ -49,12 +43,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # scripts/ 폴더를 import 검색 경로 맨 앞에 넣는다. 그래야 아래 두 줄의 from ... import 가 된다.
 # predict_count.py 안에서 "from verify_counts import ..." 를 하므로 scripts/ 자체가 경로에 있어야 한다.
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from predict_count import (
-    count_boxes,
-)  # 추론 결과 → {'bolt': n, 'nut': n, 'washer': n}. predict_count.py 65행
-from crop_session import (
-    center_square_box,
-)  # (가로, 세로) → 가운데 정사각형 좌표. 웹캠 16:9 원본을 학습 때와 같은 1:1 로 맞춘다
+# 추론 결과 → {'bolt': n, 'nut': n, 'washer': n}. predict_count.py 65행
+from predict_count import count_boxes
+# (가로, 세로) → 가운데 정사각형 좌표. 웹캠 16:9 원본을 학습 때와 같은 1:1 로 맞춘다
+from crop_session import center_square_box
 
 # EXP-03 최종 모델. 기본값이 EXP-01 인 predict_count.py 와 달리 여기는 운영용이라 최종 모델을 고정한다.
 WEIGHTS = PROJECT_ROOT / "runs" / "exp03_s08overlap" / "weights" / "best.pt"
@@ -128,9 +120,9 @@ async def inspect(
     # numpy 슬라이싱 [세로 범위, 가로 범위]. Pillow 의 crop 과 달리 순서가 (행, 열) 이다.
     frame = frame[upper:lower, left:right]
 
-    # TODO 1: 추론. predict_count.py 의 predict_folder 에서 한 줄을 그대로 가져온다.
-    #   입력은 경로가 아니라 frame(numpy 배열)이다. YOLO 는 배열도 받는다.
-    #   imgsz=IMGSZ, conf=CONF, iou=IOU, verbose=False 를 넘기고, 리스트의 [0] 을 result 에 담는다.
+    # 추론. predict_count.py 의 predict_folder 와 같은 호출인데 입력이 경로가 아니라 frame(numpy 배열)이다. YOLO 는 배열도 받는다.
+    # iou=IOU 가 predict_count.py 에는 없던 인자다 (그쪽은 기본 0.7). 운영값 0.5 는 EXP-03 에서 확정.
+    # predict 는 여러 장을 받을 수 있어 리스트를 돌려주므로 한 장인 우리는 [0] 만 꺼낸다.
     result = MODEL.predict(frame, imgsz=IMGSZ, conf=CONF, iou=IOU, verbose=False)[0]
 
     # 모델이 센 개수. {'bolt': n, 'nut': n, 'washer': n}. 탐지 0개인 클래스도 0 으로 들어 있다.
@@ -138,15 +130,15 @@ async def inspect(
     # 요청에 담겨 온 기대 개수를 counts 와 같은 모양의 딕셔너리로 만든다. 모양이 같아야 == 한 번으로 비교된다.
     expected = {"bolt": bolt, "nut": nut, "washer": washer}
 
-    # TODO 2: 판정. 세 개수가 전부 같으면 "OK", 하나라도 다르면 "NG" 를 verdict 에 담는다.
-    #   딕셔너리끼리 == 로 비교하면 키와 값이 전부 같을 때만 True 다 (predict_count.py 의 compare 와 같은 원리).
+    # 판정. 딕셔너리끼리 == 는 키와 값이 전부 같을 때만 True 라, 세 개수가 모두 맞아야 OK 다.
+    # 하나라도 다르면 NG. 어느 부품이 틀렸는지는 응답의 counts 와 expected 를 나란히 보면 안다.
     if counts == expected:
         verdict = "OK"
     else:
         verdict = "NG"
 
-    # TODO 3: 응답. 위 docstring 의 "출력" 모양대로 딕셔너리를 만들어 return 한다.
-    #   키 이름은 "result", "counts", "expected" 세 개. WPF 가 이 이름으로 꺼내 쓰므로 바꾸면 C# 쪽도 같이 바꿔야 한다.
+    # 응답. 딕셔너리를 return 하면 FastAPI 가 JSON 으로 바꿔 보낸다.
+    # 키 이름 "result", "counts", "expected" 는 WPF 가 이 이름으로 꺼내 쓰므로 바꾸면 C# 쪽도 같이 바꿔야 한다.
     return {
         "result": verdict,
         "counts": counts,
