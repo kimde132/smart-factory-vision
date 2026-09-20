@@ -18,7 +18,7 @@
 
 > **터미널을 다시 켰으면:** `claude --continue` 로 9/20 대화가 이어진다. 안 되면 `claude` 로 새로 시작해 **"상태판 읽고 이어가자"** 라고 하면 된다.
 > 9/20 밤에 멈춘 지점: `ai-server/main.py` 완성(`/health`, `/inspect`). 사용자가 TODO 3개 채움, 4종 요청(정상·16:9 원본·오답·비사진)으로 검증. **다음 한마디: "DB 저장 시작하자"** — 판정 결과를 MSSQL 에 남기는 단계(SQLAlchemy 모델 + Alembic, B등급).
-> 사용자가 아직 안 한 것: 직접 uvicorn 으로 띄워 `/docs` 에서 한 번 눌러 보기 (아래 체크리스트).
+> `main.py` 는 앞으로 두 번 더 자란다: DB 저장(`inspect()` 끝에 저장 코드) → `GET /history`(WPF 이력 조회) · Excel 창구.
 
 > 지금 상태: **실패 분석 → 재학습 사이클을 두 바퀴 돌고 AI 파트를 닫았다.**
 > 최종 모델 = **`runs/exp03_s08overlap/weights/best.pt`**, 운영값 = **conf 0.4 · iou 0.5** (사용자 확정 9/20).
@@ -26,7 +26,7 @@
 
 - [x] ~~**`experiment-log.md` EXP-03 4·5절 — Q1~Q5에 답 쓰기**~~ ✅ **완료 9/20 밤.** 첨삭 2라운드. 그림자는 두 조명 범위에서 해결, 겹침은 원인 미상(가설 둘 + 확인법), 대책은 모델 쪽(35장 더), 면접용 문장은 27/27 + 5/8로 나눠 말한다
 - [x] ~~**FastAPI 서버** (B등급)~~ ✅ **완료 9/20 밤.** `ai-server/main.py`. 기대 개수는 **요청에 담아 보낸다**(사용자 결정). 응답 `{"result": "OK"|"NG", "counts": {...}, "expected": {...}}`. 서버 안에서 가운데 1:1 크롭(16:9 원본도 받음)
-- [ ] **(사용자) 서버 직접 띄워 보기** — `cd ai-server` → `.venv/Scripts/uvicorn main:app --reload` → 브라우저 `http://localhost:8000/docs` → `/inspect` Try it out → `dataset/crop/s08/s08_001.jpg` + 0/2/4 → OK 확인
+- [x] ~~**(사용자) 서버 직접 띄워 보기**~~ ✅ **완료 9/20 밤.** uvicorn → `/health` → `/docs` 에서 OK · NG · 400(비사진) · 422(비숫자) 네 가지 확인. 띄우는 법은 `main.py` 상단 주석
 - [ ] 그 뒤: DB(MSSQL) → Excel → WPF. 순서와 등급은 `work-grades.md`
 - [ ] (시간이 남으면) 겹침 추가 촬영·재학습 / 대조 실험 / ablation. 못 하면 EXP-03 5절에 한계로 남긴다
 - [ ] (선택) `predict_count.py`에 `--iou` 인자 추가 — 지금은 없어서 9/20 채점은 임시 스크립트(`runs/predict/score_*.py`, git 제외)로 했다
