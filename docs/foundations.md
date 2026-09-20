@@ -658,7 +658,7 @@ ALTER LOGIN [sa] DISABLE                   -- ④ 마스터키 계정은 잠금
 
 **`sa`가 무엇인가:** SQL Server 설치 시 자동으로 생기는 `sysadmin` 계정입니다. 이름이 모든 SQL Server에서 똑같아서 **공격자가 가장 먼저 시도하는 계정**입니다. 그래서 껐습니다.
 
-**끄면 잠기지 않나?** 안 잠깁니다. 설치할 때 `/SQLSYSADMINACCOUNTS`로 김덕님의 윈도우 계정을 `sysadmin`에 넣었기 때문에, Windows 인증으로 언제든 최고 권한으로 들어갈 수 있습니다.
+**끄면 잠기지 않나?** 안 잠깁니다. 설치할 때 `/SQLSYSADMINACCOUNTS`로 김동언 님의 윈도우 계정을 `sysadmin`에 넣었기 때문에, Windows 인증으로 언제든 최고 권한으로 들어갈 수 있습니다.
 
 **왜 `db_owner`까지 줬나:** 나중에 Alembic이 테이블을 만들고 바꿔야 하는데, 읽기/쓰기 권한만으로는 테이블 생성이 안 됩니다. 다만 **우리 DB 안으로 범위가 제한**되므로 `sa`를 쓰는 것보다 훨씬 안전합니다.
 
@@ -737,6 +737,114 @@ session.query(Inspection).filter(Inspection.result == "NG").all()
 - 계정·권한 확인
 
 코드로 다 할 수 있지만, **"데이터가 실제로 들어갔나"를 눈으로 확인할 때** 훨씬 빠릅니다. SQL이 처음이라면 특히 유용합니다.
+
+### 4-10. 테이블 · 행 · 컬럼 · 타입 · 기본 키 (2026-09-20 추가)
+
+pandas를 써 봤다면 거의 그대로 대응됩니다.
+
+| DB 단어 | 뜻 | pandas / 엑셀로 치면 |
+|---|---|---|
+| **데이터베이스(DB)** | 테이블 여러 개를 담는 통. 우리 것은 `smart_factory_vision` | 엑셀 파일 하나 |
+| **테이블(table)** | 표 하나. 우리가 만들 것은 검사 이력 표 | DataFrame 하나 / 시트 하나 |
+| **컬럼(column, 열)** | 세로 칸. 이름과 타입이 고정돼 있다 | `df["result"]` / 엑셀의 열 |
+| **행(row, 레코드)** | 가로 한 줄. 우리 표에서는 **검사 한 번 = 행 하나** | DataFrame의 한 줄 |
+| **스키마(schema)** | 표의 설계도. 컬럼 이름·타입·규칙의 목록 | `df.dtypes` |
+| **쿼리(query)** | SQL 명령 하나 | `df[df.result == "NG"]` 같은 한 줄 |
+
+엑셀과 가장 다른 점: **컬럼마다 타입을 먼저 정하고, 맞지 않는 값은 DB가 거절합니다.** 숫자 칸에 글자를 넣으면 오류가 납니다. 그래서 데이터가 조용히 망가지지 않습니다.
+
+**자주 쓰는 타입 (SQL Server)**
+
+| 타입 | 담는 것 | 예 |
+|---|---|---|
+| `INT` | 정수 | 볼트 개수 `3` |
+| `NVARCHAR(n)` | 글자, 최대 n자. 앞의 `N`이 유니코드라 한글이 된다 | `'OK'`, `N'재검사함'` |
+| `DATETIME2` | 날짜와 시각 | `2026-09-20 18:41:14` |
+| `BIT` | 참/거짓 (1/0) | |
+| `FLOAT` | 소수 | 확신도 `0.86` |
+
+**컬럼에 붙이는 규칙**
+
+- `NOT NULL` — 비워 둘 수 없다. `NULL`은 "값이 없음"이라는 뜻이고 Python의 `None`에 해당한다. 0이나 빈 글자와 다르다.
+- `PRIMARY KEY`(기본 키, PK) — 각 행을 구분하는 번호. 겹칠 수 없고 비울 수 없다. 보통 `id`라는 이름의 정수 컬럼을 쓴다.
+- `IDENTITY(1,1)` — 1부터 1씩 자동으로 올라가는 번호. 행을 넣을 때 `id`를 직접 적지 않아도 DB가 채운다.
+- `DEFAULT 값` — 값을 안 적었을 때 들어갈 기본값. `DEFAULT SYSDATETIME()`은 "지금 시각".
+
+### 4-11. SQL 기본 문법 — 다섯 문장 (2026-09-20 추가)
+
+**쓰는 규칙**
+
+- 문장 끝에 `;`
+- 키워드는 대소문자를 가리지 않는다. 관례로 `SELECT`처럼 대문자로 쓴다
+- 글자 값은 **작은따옴표**. `'OK'`. 한글이 들어가면 `N'한글'`
+- 같다는 `=` 하나(Python의 `==` 아님), 다르다는 `<>`
+- 주석은 `--`
+
+**① 표 만들기 — `CREATE TABLE`**
+
+```sql
+CREATE TABLE practice (
+    id         INT IDENTITY(1,1) PRIMARY KEY,           -- 자동 번호, 기본 키
+    created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(), -- 안 적으면 지금 시각
+    result     NVARCHAR(2) NOT NULL,                     -- 'OK' 또는 'NG'
+    bolt_count INT NOT NULL,
+    memo       NVARCHAR(100) NULL                        -- 비워도 되는 칸
+);
+```
+
+한 줄이 컬럼 하나이고 `이름 타입 규칙` 순서입니다.
+
+**② 행 넣기 — `INSERT`**
+
+```sql
+INSERT INTO practice (result, bolt_count) VALUES ('OK', 3);
+INSERT INTO practice (result, bolt_count, memo) VALUES ('NG', 4, N'볼트 하나 더 셈');
+```
+
+앞 괄호가 컬럼 이름, 뒤 괄호가 값이고 순서가 짝을 이룹니다. `id`와 `created_at`은 안 적었으므로 DB가 채웁니다.
+
+**③ 읽기 — `SELECT`** (가장 많이 쓴다)
+
+```sql
+SELECT * FROM practice;                                   -- 전부. *는 "모든 컬럼"
+SELECT id, result FROM practice WHERE result = 'NG';      -- 컬럼 둘만, NG인 행만
+SELECT TOP 2 * FROM practice ORDER BY created_at DESC;    -- 최근 순으로 2개. DESC=내림차순
+SELECT COUNT(*) FROM practice WHERE result = 'OK';        -- OK가 몇 행인가
+SELECT result, COUNT(*) AS cnt FROM practice GROUP BY result;  -- 결과별 개수
+```
+
+읽는 순서: `FROM`(어느 표에서) → `WHERE`(어떤 행만) → `SELECT`(어떤 컬럼을) → `ORDER BY`(어떤 순서로).
+pandas로 치면 `df[df.result == "NG"][["id", "result"]]`와 같은 일입니다.
+
+**④ 고치기 — `UPDATE`**
+
+```sql
+UPDATE practice SET memo = N'재검사함' WHERE id = 2;
+```
+
+**⑤ 지우기 — `DELETE`**
+
+```sql
+DELETE FROM practice WHERE id = 3;
+```
+
+> ⚠️ **`UPDATE`와 `DELETE`에서 `WHERE`를 빼면 표의 모든 행이 대상이 됩니다.** 되돌릴 수 없습니다.
+> 실행 전에 같은 `WHERE`로 `SELECT`를 먼저 돌려 어떤 행이 걸리는지 보는 습관을 들입니다.
+
+표 자체를 없애는 것은 `DROP TABLE practice;` 입니다. 안의 행도 전부 사라집니다.
+
+**이번 프로젝트에서 안 쓰는 것:** `JOIN`은 표 두 개를 이어 붙이는 문법인데, 우리는 표가 하나라 쓰지 않습니다.
+
+### 4-12. SSMS에서 직접 해 보기 (2026-09-20 추가)
+
+1. 시작 메뉴에서 **SQL Server Management Studio 21** 실행
+2. 연결 창: Server name `localhost` / Authentication `Windows Authentication` / **Trust Server Certificate 체크** → Connect
+   (체크를 안 하면 인증서 오류가 난다. 이유는 4-7의 `TrustServerCertificate` 설명과 같다)
+3. 왼쪽 **Object Explorer**에서 `Databases` → `smart_factory_vision` 을 펼친다. `Tables`가 우리 표가 생길 자리다
+4. `smart_factory_vision`을 **우클릭 → New Query**. 위쪽 드롭다운에 `smart_factory_vision`이 떠 있는지 확인한다. `master`면 엉뚱한 DB에 표가 생긴다
+5. SQL을 적고 **F5**(실행). **글자를 드래그해 선택하면 선택한 부분만 실행된다.** 한 문장씩 돌려 볼 때 쓴다
+6. 아래 **Results** 탭에 표가, **Messages** 탭에 "(1개 행이 영향을 받음)" 같은 글자가 나온다
+7. 표를 만든 뒤 Object Explorer의 `Tables`를 **우클릭 → Refresh** 해야 목록에 보인다
 
 ---
 
