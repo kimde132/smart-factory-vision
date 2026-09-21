@@ -50,6 +50,33 @@
 
 ---
 
+## 2026-09-21 (월) ~ 09-22 새벽 — DB 기초 · `db.py`
+
+> DB 파트 시작. 사용자에게 DB 시스템은 처음이라 개념과 SSMS 실습부터 했다.
+
+**한 일**
+- **DB 기초 설명 + SSMS 실습** — 테이블·행·컬럼·타입·기본 키, SQL 다섯 문장(`CREATE TABLE`/`INSERT`/`SELECT`/`UPDATE`/`DELETE`). 사용자가 SSMS 21에서 연습 표 `practice`를 만들고 넣고 읽고 고치고 지우고, 일부러 타입 오류·NOT NULL 오류를 내 본 뒤 `DROP`. 같은 내용을 `foundations.md` **4-10~4-12**에 기록 (`eafd73c`)
+- **사용자 질문에 답한 것** — SSMS는 DB 본체가 아니라 들여다보는 창 / `smart_factory_vision`은 프로젝트가 올라간 게 아니라 같은 이름의 빈 DB / 연결 창 세 칸 = `.env` 세 항목 / SQLD의 SQL과 같은 것(Oracle과 다른 곳: `TOP`, `SYSDATETIME()`, `IDENTITY`, `NVARCHAR`) / MSSQL·PostgreSQL·MySQL은 DB 본체가 다른 제품 / SQLAlchemy = ORM / 채용 공고의 "MSSQL"은 SQL을 직접 쓸 수 있는지를 본다
+- **등급 결정: DB 저장은 B등급**(사용자). **표 설계 확정** — `inspection` 10개 컬럼. 센 개수와 기대 개수를 둘 다 저장, `model_name` 포함, 사진 경로는 나중에 두 번째 마이그레이션으로
+- **`ai-server/db.py`** — Claude 뼈대(`build_url`, `Base`, 접속 시험) + 사용자 두 줄(`create_engine`, `sessionmaker`). `python db.py` → `[성공] ... smart_factory_vision`
+
+**막힌 것 / 어떻게 풀었나**
+- 사용자가 TODO 두 줄에서 "문법을 아예 몰라서" 멈춤 → 어제 직접 쓴 `MODEL.predict(frame, imgsz=IMGSZ, ...)`와 같은 구조(`함수(값, 이름=값)`)라는 것으로 풀었다
+- Claude: 문서 갱신 스크립트를 heredoc으로 돌리면 도구가 백슬래시를 절반으로 줄여 두 번 죽었다 → 스크립트를 파일로 저장해 실행하는 방식으로 바꿈
+
+**환경·설정 변경**
+- DB에 표는 아직 없다. 연습 표 `practice`는 만들었다가 지웠다
+- `db.py`의 `ECHO_SQL = True` — 배우는 동안 SQLAlchemy가 보내는 SQL을 터미널에 찍는다
+
+**다음에 이어서**
+- `models.py` `Inspection` 클래스 → Alembic 첫 마이그레이션 → `main.py`에 저장 붙이기
+
+**메모 / 궁금한 것**
+- 집계 쿼리(일별 NG율 등)는 이력 조회·Excel 단계에서 **SQL로 직접** 쓰는 안 — 면접에서 "저장은 ORM, 집계는 SQL"을 둘 다 보여 주려는 것. 그 단계에서 결정
+- `work-grades.md`에 3주차 이후(DB/C#/WPF/Excel) 등급이 아직 비어 있다
+
+---
+
 ## 2026-09-20 (일) — 새벽 촬영 · 밤 EXP-03
 
 > 🏠 기숙사. **두 번째 사이클(겹침) + 최종 test.** AI 파트를 닫았다.
