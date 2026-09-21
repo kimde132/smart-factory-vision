@@ -349,6 +349,18 @@ ai-server\.venv\Scripts\python.exe scripts\rename_session.py s01 --apply
 - **막힌 것:** 첫 실행이 `UnicodeEncodeError`로 죽었다. 윈도우 콘솔 CP949가 em dash(—)를 출력하지 못했다.
 - **해결:** 출력 문자를 바꾸고 `sys.stdout.reconfigure(errors="replace")` 추가. `scripts/` 폴더는 이때 새로 만들었다(계획 구조에 없던 것).
 
+## 추가. Alembic 설정 (`ai-server/migrations/`) — 2026-09-22
+
+```powershell
+cd ai-server
+.venv\Scripts\alembic init migrations      # alembic.ini + migrations/ 생성
+```
+
+- **왜 필요했나:** `models.py`의 `Inspection`을 실제 DB 표로 만들고, 이후 구조 변경을 파일로 남기려고. 폴더 이름은 설치된 `alembic` 패키지와 헷갈리지 않게 `migrations`.
+- **고친 것:** `env.py`가 `db.build_url()`(접속)과 `Base.metadata`(설계)를 쓰도록 연결, `import models` 추가. `alembic.ini`는 `sqlalchemy.url` 비움, 파일 이름을 날짜로 시작.
+- **막힌 것:** `alembic.ini`에 한국어 주석을 넣자 모든 명령이 `UnicodeDecodeError: 'cp949'`로 죽었다. 한국어 윈도우의 Python이 `.ini`를 cp949로 읽는다.
+- **해결:** `alembic.ini`는 ASCII만 쓰고, 한국어 안내는 `migrations/README`로 옮겼다. 생성 → 적용 → 되돌리기를 리허설한 뒤 흔적을 지워 빈 상태로 사용자에게 넘김.
+
 ## 오늘 하지 않은 것 (의도적)
 
 | 항목 | 이유 |

@@ -1,0 +1,39 @@
+Alembic 마이그레이션 폴더 안내
+================================
+
+이 폴더는 무엇인가
+  DB 구조(표) 변경 이력을 파일로 남기는 곳. git 이 코드에 하는 일을 Alembic 이 DB 구조에 한다.
+  `alembic init migrations` 로 만들었고, 아래 세 파일을 이 프로젝트에 맞게 고쳤다.
+
+파일별 역할
+  ../alembic.ini     alembic 명령이 가장 먼저 읽는 설정. 폴더 위치, 파일 이름 규칙, 로그 출력.
+                     ★ 이 파일에는 한국어를 넣지 않는다. 한국어 윈도우의 Python 은 .ini 를 cp949 로 읽어서
+                       UTF-8 한국어 주석이 있으면 모든 alembic 명령이 UnicodeDecodeError 로 죽는다 (2026-09-22 실제로 겪음).
+                       그래서 alembic.ini 의 설명을 이 README 에 적는다.
+                     고친 곳: sqlalchemy.url 비움(비밀번호를 git 에 올리지 않으려고, 접속 정보는 .env 에만),
+                              file_template 을 날짜로 시작하게(적용 순서가 파일 이름에 보이게).
+  env.py             명령이 돌 때마다 실행되는 연결 코드. "어느 DB 에 붙나(db.build_url)" 와
+                     "설계가 어디 있나(Base.metadata, models.py)" 를 Alembic 에 알려 준다.
+  script.py.mako     새 마이그레이션 파일의 틀. 고치지 않았다.
+  versions/          마이그레이션 파일들. 파일 하나 = 구조 변경 하나. upgrade()=적용, downgrade()=되돌리기.
+
+실행 흐름에서의 위치
+  터미널(ai-server 폴더)에서 alembic 명령 -> alembic.ini -> env.py -> versions/*.py
+  서버(main.py)가 돌 때는 이 폴더가 쓰이지 않는다. 표 구조를 바꿀 때만 쓴다.
+
+표 구조를 바꾸는 순서
+  1. models.py 를 고친다 (예: 컬럼 한 줄 추가)
+  2. .venv/Scripts/alembic revision --autogenerate -m "설명"     models.py 와 실제 DB 를 비교해 마이그레이션 파일을 만든다
+  3. versions/ 에 생긴 파일을 열어 upgrade()/downgrade() 가 의도대로인지 읽는다. 자동 생성은 틀릴 수 있다
+  4. .venv/Scripts/alembic upgrade head                          DB 에 적용한다
+  5. SSMS 에서 표를 새로고침해 확인한다
+  6. 마이그레이션 파일을 git 에 커밋한다. 다른 PC 에서는 4번만 하면 같은 표가 생긴다
+
+자주 쓰는 명령 (전부 ai-server 폴더에서)
+  .venv/Scripts/alembic current              이 DB 가 어느 마이그레이션까지 적용됐는지
+  .venv/Scripts/alembic history              마이그레이션 목록
+  .venv/Scripts/alembic upgrade head --sql   적용하지 않고 실행될 SQL 만 찍어 본다
+  .venv/Scripts/alembic downgrade -1         마지막 마이그레이션 하나를 되돌린다
+
+DB 안의 alembic_version 표
+  Alembic 이 스스로 만든다. "어느 마이그레이션까지 적용됐나" 를 한 줄로 기억한다. 손으로 고치지 않는다.

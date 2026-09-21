@@ -60,8 +60,10 @@
 - **등급 결정: DB 저장은 B등급**(사용자). **표 설계 확정** — `inspection` 10개 컬럼. 센 개수와 기대 개수를 둘 다 저장, `model_name` 포함, 사진 경로는 나중에 두 번째 마이그레이션으로
 - **`ai-server/db.py`** — Claude 뼈대(`build_url`, `Base`, 접속 시험) + 사용자 두 줄(`create_engine`, `sessionmaker`). `python db.py` → `[성공] ... smart_factory_vision`
 - **`ai-server/models.py`** — `Inspection` 클래스. Claude 뼈대(컬럼 4개를 패턴 예시로) + 사용자 6줄(정수 컬럼 5개, `model_name`). `python models.py`로 `CREATE TABLE` 10개 컬럼 확인. 한 번에 통과
+- **Alembic 설정**(Claude) — `alembic init migrations`, `env.py`를 `db.build_url()`·`Base.metadata`에 연결, 파일 이름을 날짜로 시작. 생성 → 적용(표 10개 컬럼 확인) → 되돌리기 리허설 후 흔적 삭제. 첫 마이그레이션 생성·적용은 사용자 몫으로 남김
 
 **막힌 것 / 어떻게 풀었나**
+- **`alembic.ini`에 한국어 주석을 넣자 모든 alembic 명령이 `UnicodeDecodeError: cp949`로 죽었다.** 한국어 윈도우의 Python이 `.ini`를 cp949로 읽는다 → `alembic.ini`는 ASCII만, 한국어 안내는 `migrations/README`로 (`setup-log.md`)
 - 사용자가 TODO 두 줄에서 "문법을 아예 몰라서" 멈춤 → 어제 직접 쓴 `MODEL.predict(frame, imgsz=IMGSZ, ...)`와 같은 구조(`함수(값, 이름=값)`)라는 것으로 풀었다
 - Claude: 문서 갱신 스크립트를 heredoc으로 돌리면 도구가 백슬래시를 절반으로 줄여 두 번 죽었다 → 스크립트를 파일로 저장해 실행하는 방식으로 바꿈
 
