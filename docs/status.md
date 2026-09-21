@@ -5,7 +5,7 @@
 > 작성: Claude — **커밋할 때마다 함께 갱신한다.** 낡은 상태판은 없느니만 못하다.
 > 판단과 근거는 여기 쓰지 않는다. `decisions.md`가 담당한다. 이 파일은 **포인터**다.
 >
-> 최종 갱신: **2026-09-22 새벽** (FastAPI `POST /inspect` 동작. **DB 저장 4단계 중 1단계(`db.py`) 끝. 다음은 `models.py`**)
+> 최종 갱신: **2026-09-22 새벽** (FastAPI `POST /inspect` 동작. **DB 저장 4단계 중 2단계(`models.py`)까지 끝. 다음은 Alembic**)
 
 ---
 
@@ -17,7 +17,7 @@
 ### ▶ 다음에 앉으면 — 9/20 밤에 적음
 
 > **터미널을 다시 켰으면:** `claude --continue` 로 9/20 대화가 이어진다. 안 되면 `claude` 로 새로 시작해 **"상태판 읽고 이어가자"** 라고 하면 된다.
-> **9/22 새벽에 멈춘 지점: DB 저장(B등급, 사용자 결정 9/21) 4단계 중 1단계 끝.** ① ~~`db.py` 엔진·세션·Base~~ ✅ → ② **`models.py` `Inspection` 클래스 (다음 한마디: "다음")** → ③ Alembic 첫 마이그레이션(표 생성) → ④ `main.py` `inspect()` 끝에 저장.
+> **9/22 새벽에 멈춘 지점: DB 저장(B등급, 사용자 결정 9/21) 4단계 중 1단계 끝.** ① ~~`db.py` 엔진·세션·Base~~ ✅ → ② ~~`models.py` `Inspection` 클래스~~ ✅ (DB에 표는 아직 없다) → ③ **Alembic 첫 마이그레이션(표 생성) (다음 한마디: "다음")** → ④ `main.py` `inspect()` 끝에 저장.
 > 표 설계(사용자 확정 9/21): `inspection` — `id`, `created_at`, `result`, `bolt/nut/washer_count`, `bolt/nut/washer_expected`, `model_name`. **사진 경로 컬럼은 일부러 뺐다** — 나중에 Alembic 두 번째 마이그레이션으로 추가해 "데이터가 든 표에 컬럼 추가"를 겪는다.
 > DB 기초(테이블·타입·SQL 다섯 문장·SSMS 실습)는 `foundations.md` 4-10~4-12. **사용자는 SQLD를 봤다** — SQL 문장은 아는 영역, 처음인 것은 시스템 구조와 Python 연동.
 > 그 전(9/20 밤): `ai-server/main.py` 완성(`/health`, `/inspect`). 사용자가 TODO 3개 채움, 4종 요청(정상·16:9 원본·오답·비사진)으로 검증. **다음 한마디: "DB 저장 시작하자"** — 판정 결과를 MSSQL 에 남기는 단계(SQLAlchemy 모델 + Alembic, B등급).
