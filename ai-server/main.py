@@ -1,16 +1,18 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 이 파일은 무엇을 하는가
 #   FastAPI 서버. WPF가 보낸 사진 한 장을 받아 YOLO로 볼트·너트·와셔 개수를 세고,
-#   함께 받은 기대 개수와 비교해 OK/NG 판정을 JSON으로 돌려준다.
+#   함께 받은 기대 개수와 비교해 OK/NG 판정을 JSON으로 돌려준다. 판정 결과는 MSSQL 의 inspection 표에 한 줄 저장한다.
 #   창구(엔드포인트)는 둘이다.
 #     GET  /health   → 서버가 살아 있는지, 모델이 올라왔는지 확인용
 #     POST /inspect  → 사진 + 기대 개수 → 판정
 #
 # 프로젝트 실행 흐름에서 어느 위치인가
-#   WPF(C#) ──사진+기대개수──▶ [현재 파일] ──▶ YOLO(best.pt) ──▶ count_boxes ──▶ 판정 ──JSON──▶ WPF
+#   WPF(C#) ──사진+기대개수──▶ [현재 파일] ──▶ YOLO(best.pt) ──▶ count_boxes ──▶ 판정 ──▶ DB 저장 ──JSON──▶ WPF
+#                                                                                      └─▶ MSSQL inspection 표 (db.py · models.py)
 #   앞: runs/exp03_s08overlap/weights/best.pt 가 있어야 한다 (EXP-03 최종 모델, git 제외).
 #       scripts/predict_count.py(count_boxes) 와 scripts/crop_session.py(center_square_box) 를 빌려 쓴다.
-#   뒤: 다음 단계에서 판정 결과를 MSSQL 에 저장하는 코드가 이 파일의 inspect() 뒤에 붙는다.
+#       SQL Server 가 켜져 있고 inspection 표가 있어야 한다 (alembic upgrade head). 없으면 판정은 되지만 저장에서 500 오류.
+#   뒤: 저장된 행은 나중에 GET /history(WPF 이력 조회)와 Excel 추출이 읽는다.
 #
 #   띄우는 법 (ai-server 폴더에서):
 #       .venv/Scripts/uvicorn main:app --reload   (PowerShell 에서도 / 로 된다)
@@ -26,17 +28,27 @@
 #   async def     : 비동기 함수. 요청을 기다리는 동안 다른 요청도 받을 수 있게 하는 문법.
 #                  이 프로젝트에서는 "FastAPI 가 이렇게 쓰라고 한다" 정도로 알면 된다. await 는 그 안에서 기다리는 표시.
 #   운영값        : conf 0.4 · iou 0.5 (experiment-log.md EXP-03 에서 확정). 이 값 밑의 박스는 버리고, 이만큼 겹친 같은 클래스 박스는 하나로 합친다.
+#   세션(session)  : DB 에 시킬 작업을 담는 바구니. session.add(객체) 로 담고 session.commit() 으로 확정한다.
+#                  commit 을 안 부르면 오류 없이 아무것도 저장되지 않는다. with 블록으로 열면 끝날 때 자동으로 닫힌다.
 # ─────────────────────────────────────────────────────────────────────────────
 
 import sys  # 파이썬이 import 할 때 뒤지는 폴더 목록(sys.path)을 고치려고 쓴다
+
 # 경로를 문자열이 아니라 객체로 다룬다. "/" 로 이어붙일 수 있다
 from pathlib import Path
 
 import cv2  # OpenCV. 업로드된 사진 바이트를 이미지 배열로 바꾸고(imdecode) 가운데를 자르는 데 쓴다
 import numpy as np  # 사진 바이트를 OpenCV 가 읽을 수 있는 숫자 배열로 감싸는 데 쓴다
+
 # 서버 본체, 파일 입력, 글자 입력, 오류 응답, 업로드 파일 타입
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from ultralytics import YOLO  # 학습된 best.pt 를 읽어 추론하는 클래스
+
+# 같은 폴더(ai-server)의 파일들. uvicorn 을 ai-server 에서 띄우므로 바로 import 된다.
+from db import (
+    SessionLocal,
+)  # 세션을 찍어내는 틀. SessionLocal() 로 부르면 DB 작업 바구니 하나가 나온다
+from models import Inspection  # inspection 표 한 행 = Inspection 객체 하나
 
 # __file__ 은 이 파일의 경로. .parent 를 두 번 올라가면 프로젝트 최상위(smart-factory-vision/)다.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -45,11 +57,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 # 추론 결과 → {'bolt': n, 'nut': n, 'washer': n}. predict_count.py 65행
 from predict_count import count_boxes
+
 # (가로, 세로) → 가운데 정사각형 좌표. 웹캠 16:9 원본을 학습 때와 같은 1:1 로 맞춘다
 from crop_session import center_square_box
 
 # EXP-03 최종 모델. 기본값이 EXP-01 인 predict_count.py 와 달리 여기는 운영용이라 최종 모델을 고정한다.
 WEIGHTS = PROJECT_ROOT / "runs" / "exp03_s08overlap" / "weights" / "best.pt"
+# DB 의 model_name 컬럼에 들어갈 이름. 경로에서 실험 폴더 이름을 꺼낸다: .../exp03_s08overlap/weights/best.pt → parent 두 번 → "exp03_s08overlap".
+# 따로 글자로 적지 않고 경로에서 뽑는 이유: WEIGHTS 를 바꾸면 이름도 따라 바뀌어 둘이 어긋나지 않는다.
+MODEL_NAME = WEIGHTS.parent.parent.name
 # 운영값. EXP-03 에서 val·s08·s09 로 확정했다. 바꾸려면 experiment-log.md 에 근거를 먼저 남긴다.
 CONF = 0.4
 IOU = 0.5
@@ -93,7 +109,7 @@ async def inspect(
         image  : 업로드된 사진 파일 (jpg). 웹캠 16:9 원본이어도 되고 1:1 이어도 된다. 가운데 정사각형으로 잘라 쓴다.
         bolt, nut, washer : 기대 개수 (int). 예: 3, 5, 0. 이 값과 같아야 OK 다.
     출력:
-        딕셔너리 → FastAPI 가 JSON 으로 바꿔 보낸다. 예:
+        딕셔너리 → FastAPI 가 JSON 으로 바꿔 보낸다. 그 전에 같은 내용을 inspection 표에 한 줄 저장한다. 예:
         {
           "result":   "NG",
           "counts":   {"bolt": 4, "nut": 4, "washer": 0},   ← 모델이 센 개수
@@ -102,6 +118,7 @@ async def inspect(
     실패 시:
         사진으로 읽을 수 없는 파일이면 HTTPException(400). WPF 쪽에는 상태 코드 400 과 detail 글자가 간다.
         bolt/nut/washer 가 숫자가 아니면 이 함수에 들어오기 전에 FastAPI 가 422 를 돌려준다.
+        DB 가 꺼져 있거나 표가 없으면 commit 에서 sqlalchemy.exc.OperationalError/ProgrammingError → FastAPI 가 500 을 돌려준다.
     """
     # await : 파일 전체가 도착할 때까지 기다린다. 결과는 bytes (사진 파일의 날것).
     data = await image.read()
@@ -136,6 +153,32 @@ async def inspect(
         verdict = "OK"
     else:
         verdict = "NG"
+
+    # ── DB 저장 ──────────────────────────────────────────────────────────────
+    # 응답을 보내기 전에 저장한다. 저장에 실패하면 500 이 나가서 "판정은 됐는데 이력에는 없다" 는 상태를 만들지 않는다.
+
+    # 표 한 행을 Python 객체로 만든다. 키워드 인자 이름 = inspection 표의 컬럼 이름 (models.py).
+    # 아직 Python 메모리에만 있다. DB 는 이 객체의 존재를 모른다.
+    # id 와 created_at 은 적지 않는다. commit 때 DB 가 자동 번호와 현재 시각으로 채운다.
+    # ★ Inspection(클래스)이다. inspect(이 함수)가 아니다. 한 글자 차이로 자기 자신을 다시 부르게 된다.
+    record = Inspection(
+        result=verdict,
+        bolt_count=counts["bolt"],
+        nut_count=counts["nut"],
+        washer_count=counts["washer"],
+        bolt_expected=expected["bolt"],
+        nut_expected=expected["nut"],
+        washer_expected=expected["washer"],
+        model_name=MODEL_NAME,
+    )
+
+    # with : 세션 하나를 열고 블록이 끝나면 자동으로 닫는다 (파일을 with open 으로 여는 것과 같은 문법).
+    with SessionLocal() as session:
+        # 바구니에 담는다. 이 시점에는 DB 로 아무것도 가지 않았다.
+        session.add(record)
+        # 여기서 INSERT INTO inspection (...) VALUES (...) 가 만들어져 DB 로 가고 COMMIT 된다.
+        # 이 줄이 없으면 오류 없이 저장이 안 된다 (블록이 끝날 때 ROLLBACK). 가장 흔한 실수.
+        session.commit()
 
     # 응답. 딕셔너리를 return 하면 FastAPI 가 JSON 으로 바꿔 보낸다.
     # 키 이름 "result", "counts", "expected" 는 WPF 가 이 이름으로 꺼내 쓰므로 바꾸면 C# 쪽도 같이 바꿔야 한다.

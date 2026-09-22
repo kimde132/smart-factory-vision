@@ -5,7 +5,7 @@
 > 작성: Claude — **커밋할 때마다 함께 갱신한다.** 낡은 상태판은 없느니만 못하다.
 > 판단과 근거는 여기 쓰지 않는다. `decisions.md`가 담당한다. 이 파일은 **포인터**다.
 >
-> 최종 갱신: **2026-09-22 새벽** (FastAPI `POST /inspect` 동작. **DB 저장 4단계 중 3단계까지 끝 — DB에 `inspection` 표가 실제로 있다(행 0). 다음은 `main.py`에 저장 붙이기**)
+> 최종 갱신: **2026-09-22 새벽** (FastAPI `POST /inspect` 동작. **DB 저장 끝.** `/inspect` 한 번 = `inspection` 표 한 행. **다음은 GET /history 또는 Excel**)
 
 ---
 
@@ -17,7 +17,9 @@
 ### ▶ 다음에 앉으면 — 9/20 밤에 적음
 
 > **터미널을 다시 켰으면:** `claude --continue` 로 9/20 대화가 이어진다. 안 되면 `claude` 로 새로 시작해 **"상태판 읽고 이어가자"** 라고 하면 된다.
-> **9/22 새벽에 멈춘 지점: DB 저장(B등급, 사용자 결정 9/21) 4단계 중 1단계 끝.** ① ~~`db.py` 엔진·세션·Base~~ ✅ → ② ~~`models.py` `Inspection` 클래스~~ ✅ (DB에 표는 아직 없다) → ③ ~~Alembic 첫 마이그레이션~~ ✅ 9/22 사용자가 생성·읽기·적용·SSMS 확인. `versions/20260922_d5097882b38e_create_inspection_table.py`, `alembic current` = `d5097882b38e (head)` → ④ **`main.py` `inspect()` 끝에 저장 (다음 한마디: "다음")** `main.py` `inspect()` 끝에 저장.
+> **9/22 새벽에 멈춘 지점: DB 저장(B등급, 사용자 결정 9/21) 4단계 중 1단계 끝.** ① ~~`db.py` 엔진·세션·Base~~ ✅ → ② ~~`models.py` `Inspection` 클래스~~ ✅ (DB에 표는 아직 없다) → ③ ~~Alembic 첫 마이그레이션~~ ✅ 9/22 사용자가 생성·읽기·적용·SSMS 확인. `versions/20260922_d5097882b38e_create_inspection_table.py`, `alembic current` = `d5097882b38e (head)` → ④ ~~`main.py` `inspect()` 끝에 저장~~ ✅ 9/22 오전. 시험 화면에서 두 번 Execute → 행 2개(OK 1, NG 1) SSMS 확인.
+> **DB 저장 파트 닫음.** 다음 후보: **`GET /history`**(지난 검사 목록을 JSON 으로 — WPF 이력 조회가 읽는다) / **Excel 추출**(pandas 로 inspection 표 → .xlsx). 우선순위(`CLAUDE.md`)상 Excel 이 이력 화면보다 앞이지만, `/history` 가 있어야 WPF 가 붙을 수 있다. 다음 세션에 정한다.
+> 나중에 할 두 번째 마이그레이션: 사진 경로 컬럼 추가 (`models.py` 한 줄 → `alembic revision --autogenerate` → 읽기 → `upgrade head`). `main.py` `inspect()` 끝에 저장.
 > 표 설계(사용자 확정 9/21): `inspection` — `id`, `created_at`, `result`, `bolt/nut/washer_count`, `bolt/nut/washer_expected`, `model_name`. **사진 경로 컬럼은 일부러 뺐다** — 나중에 Alembic 두 번째 마이그레이션으로 추가해 "데이터가 든 표에 컬럼 추가"를 겪는다.
 > DB 기초(테이블·타입·SQL 다섯 문장·SSMS 실습)는 `foundations.md` 4-10~4-12. **사용자는 SQLD를 봤다** — SQL 문장은 아는 영역, 처음인 것은 시스템 구조와 Python 연동.
 > 그 전(9/20 밤): `ai-server/main.py` 완성(`/health`, `/inspect`). 사용자가 TODO 3개 채움, 4종 요청(정상·16:9 원본·오답·비사진)으로 검증. **다음 한마디: "DB 저장 시작하자"** — 판정 결과를 MSSQL 에 남기는 단계(SQLAlchemy 모델 + Alembic, B등급).
@@ -30,7 +32,8 @@
 - [x] ~~**`experiment-log.md` EXP-03 4·5절 — Q1~Q5에 답 쓰기**~~ ✅ **완료 9/20 밤.** 첨삭 2라운드. 그림자는 두 조명 범위에서 해결, 겹침은 원인 미상(가설 둘 + 확인법), 대책은 모델 쪽(35장 더), 면접용 문장은 27/27 + 5/8로 나눠 말한다
 - [x] ~~**FastAPI 서버** (B등급)~~ ✅ **완료 9/20 밤.** `ai-server/main.py`. 기대 개수는 **요청에 담아 보낸다**(사용자 결정). 응답 `{"result": "OK"|"NG", "counts": {...}, "expected": {...}}`. 서버 안에서 가운데 1:1 크롭(16:9 원본도 받음)
 - [x] ~~**(사용자) 서버 직접 띄워 보기**~~ ✅ **완료 9/20 밤.** uvicorn → `/health` → `/docs` 에서 OK · NG · 400(비사진) · 422(비숫자) 네 가지 확인. 띄우는 법은 `main.py` 상단 주석
-- [ ] 그 뒤: DB(MSSQL) → Excel → WPF. 순서와 등급은 `work-grades.md`
+- [x] ~~DB(MSSQL)~~ ✅ 9/22. `db.py` · `models.py` · `migrations/` · `main.py` 저장
+- [ ] 그 뒤: `GET /history` / Excel → WPF. 등급은 시작할 때 묻는다 (`work-grades.md`에 3주차 이후 항목이 아직 비어 있다)
 - [ ] (시간이 남으면) 겹침 추가 촬영·재학습 / 대조 실험 / ablation. 못 하면 EXP-03 5절에 한계로 남긴다
 - [ ] (선택) `predict_count.py`에 `--iou` 인자 추가 — 지금은 없어서 9/20 채점은 임시 스크립트(`runs/predict/score_*.py`, git 제외)로 했다
 

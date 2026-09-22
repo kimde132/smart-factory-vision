@@ -62,19 +62,24 @@
 - **`ai-server/models.py`** — `Inspection` 클래스. Claude 뼈대(컬럼 4개를 패턴 예시로) + 사용자 6줄(정수 컬럼 5개, `model_name`). `python models.py`로 `CREATE TABLE` 10개 컬럼 확인. 한 번에 통과
 - **Alembic 설정**(Claude) — `alembic init migrations`, `env.py`를 `db.build_url()`·`Base.metadata`에 연결, 파일 이름을 날짜로 시작. 생성 → 적용(표 10개 컬럼 확인) → 되돌리기 리허설 후 흔적 삭제. 첫 마이그레이션 생성·적용은 사용자 몫으로 남김
 - **(오전) 사용자가 첫 마이그레이션 생성·적용** — `alembic revision --autogenerate` → 파일 읽기 → `alembic upgrade head` → SSMS에서 `inspection`(컬럼 10)·`alembic_version`(`d5097882b38e`) 확인. 주석은 Claude. **DB에 표가 생겼다(행 0)**
+- **(오전) `main.py`에 저장 붙임** — Claude: import·`MODEL_NAME`(경로에서 실험 이름 추출)·저장 자리. 사용자: `Inspection(...)` 9개 인자 + `with SessionLocal() as session: add / commit`. 1차에 `Inspection` 을 `inspect`(함수 자신)로 써서 지적, 2차 통과. 시험 화면에서 Execute 두 번 → **`inspection` 표에 행 2개(id 1 OK, id 2 NG), `model_name` = exp03_s08overlap.** **DB 저장 파트 닫음**
 
 **막힌 것 / 어떻게 풀었나**
 - **`alembic.ini`에 한국어 주석을 넣자 모든 alembic 명령이 `UnicodeDecodeError: cp949`로 죽었다.** 한국어 윈도우의 Python이 `.ini`를 cp949로 읽는다 → `alembic.ini`는 ASCII만, 한국어 안내는 `migrations/README`로 (`setup-log.md`)
+- 사용자가 "TODO 2 내용이 없다"고 함 → 이미 세 줄을 직접 써 넣은 상태였다. 그 세 줄이 무엇인지(세션 열기 / add / commit)를 SSMS 동작(창 열기 / 문장 적기 / F5)에 대응시켜 설명
+- 사용자 질문 "`/docs`에서 검사를 누른다"가 무슨 말이냐 → `docs/` 폴더와 `localhost:8000/docs`(FastAPI 시험 화면)가 이름이 같아 혼동. 앞으로 브라우저 쪽은 **"시험 화면"**이라고 부른다
 - SSMS에서 전각 입력(`ＳＥＬＥＣＴ`)이 켜져 쿼리가 안 먹음 → `Alt+=`로 반각 복귀. 표 이름 오타(`alemic`)도 같이 잡음
 - 사용자가 TODO 두 줄에서 "문법을 아예 몰라서" 멈춤 → 어제 직접 쓴 `MODEL.predict(frame, imgsz=IMGSZ, ...)`와 같은 구조(`함수(값, 이름=값)`)라는 것으로 풀었다
 - Claude: 문서 갱신 스크립트를 heredoc으로 돌리면 도구가 백슬래시를 절반으로 줄여 두 번 죽었다 → 스크립트를 파일로 저장해 실행하는 방식으로 바꿈
 
 **환경·설정 변경**
-- **DB에 `inspection` 표 생성** (첫 마이그레이션 `d5097882b38e`, 9/22 오전). `alembic_version` 표도 함께. 연습 표 `practice`는 9/21에 만들었다가 지웠다
+- **DB에 `inspection` 표 생성** (첫 마이그레이션 `d5097882b38e`, 9/22 오전). `alembic_version` 표도 함께. **운영 데이터 시작: 행 2개(시험 화면에서 넣은 s08_001 OK/NG)**
+- `main.py` `MODEL_NAME` = 가중치 경로의 실험 폴더 이름. 가중치를 바꾸면 자동으로 따라간다 연습 표 `practice`는 9/21에 만들었다가 지웠다
 - `db.py`의 `ECHO_SQL = True` — 배우는 동안 SQLAlchemy가 보내는 SQL을 터미널에 찍는다
 
 **다음에 이어서**
-- ~~`models.py`~~ ✅ → ~~Alembic 첫 마이그레이션~~ ✅ → `main.py`에 저장 붙이기
+- ~~DB 저장 4단계 전부~~ ✅
+- 다음 후보 둘: `GET /history` / Excel 추출. 다음 세션에 정한다
 
 **메모 / 궁금한 것**
 - 집계 쿼리(일별 NG율 등)는 이력 조회·Excel 단계에서 **SQL로 직접** 쓰는 안 — 면접에서 "저장은 ORM, 집계는 SQL"을 둘 다 보여 주려는 것. 그 단계에서 결정
