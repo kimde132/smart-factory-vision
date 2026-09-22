@@ -61,18 +61,20 @@
 - **`ai-server/db.py`** — Claude 뼈대(`build_url`, `Base`, 접속 시험) + 사용자 두 줄(`create_engine`, `sessionmaker`). `python db.py` → `[성공] ... smart_factory_vision`
 - **`ai-server/models.py`** — `Inspection` 클래스. Claude 뼈대(컬럼 4개를 패턴 예시로) + 사용자 6줄(정수 컬럼 5개, `model_name`). `python models.py`로 `CREATE TABLE` 10개 컬럼 확인. 한 번에 통과
 - **Alembic 설정**(Claude) — `alembic init migrations`, `env.py`를 `db.build_url()`·`Base.metadata`에 연결, 파일 이름을 날짜로 시작. 생성 → 적용(표 10개 컬럼 확인) → 되돌리기 리허설 후 흔적 삭제. 첫 마이그레이션 생성·적용은 사용자 몫으로 남김
+- **(오전) 사용자가 첫 마이그레이션 생성·적용** — `alembic revision --autogenerate` → 파일 읽기 → `alembic upgrade head` → SSMS에서 `inspection`(컬럼 10)·`alembic_version`(`d5097882b38e`) 확인. 주석은 Claude. **DB에 표가 생겼다(행 0)**
 
 **막힌 것 / 어떻게 풀었나**
 - **`alembic.ini`에 한국어 주석을 넣자 모든 alembic 명령이 `UnicodeDecodeError: cp949`로 죽었다.** 한국어 윈도우의 Python이 `.ini`를 cp949로 읽는다 → `alembic.ini`는 ASCII만, 한국어 안내는 `migrations/README`로 (`setup-log.md`)
+- SSMS에서 전각 입력(`ＳＥＬＥＣＴ`)이 켜져 쿼리가 안 먹음 → `Alt+=`로 반각 복귀. 표 이름 오타(`alemic`)도 같이 잡음
 - 사용자가 TODO 두 줄에서 "문법을 아예 몰라서" 멈춤 → 어제 직접 쓴 `MODEL.predict(frame, imgsz=IMGSZ, ...)`와 같은 구조(`함수(값, 이름=값)`)라는 것으로 풀었다
 - Claude: 문서 갱신 스크립트를 heredoc으로 돌리면 도구가 백슬래시를 절반으로 줄여 두 번 죽었다 → 스크립트를 파일로 저장해 실행하는 방식으로 바꿈
 
 **환경·설정 변경**
-- DB에 표는 아직 없다. 연습 표 `practice`는 만들었다가 지웠다
+- **DB에 `inspection` 표 생성** (첫 마이그레이션 `d5097882b38e`, 9/22 오전). `alembic_version` 표도 함께. 연습 표 `practice`는 9/21에 만들었다가 지웠다
 - `db.py`의 `ECHO_SQL = True` — 배우는 동안 SQLAlchemy가 보내는 SQL을 터미널에 찍는다
 
 **다음에 이어서**
-- ~~`models.py`~~ ✅ → Alembic 첫 마이그레이션 → `main.py`에 저장 붙이기
+- ~~`models.py`~~ ✅ → ~~Alembic 첫 마이그레이션~~ ✅ → `main.py`에 저장 붙이기
 
 **메모 / 궁금한 것**
 - 집계 쿼리(일별 NG율 등)는 이력 조회·Excel 단계에서 **SQL로 직접** 쓰는 안 — 면접에서 "저장은 ORM, 집계는 SQL"을 둘 다 보여 주려는 것. 그 단계에서 결정
