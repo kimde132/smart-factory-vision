@@ -898,6 +898,207 @@ MainWindow.xaml.cs   ← 버튼을 누르면 무슨 일이 일어나는지 (동�
 
 **OpenCvSharp**은 OpenCV의 C# 버전입니다. C# 쪽에서 웹캠 프레임을 읽고 WPF 화면에 뿌리는 데 씁니다. Python의 `cv2`와 같은 일을 C#에서 합니다.
 
+### 5-5. 큰 그림 — 지금 어디에 있나 (9/25 추가)
+
+```
+[웹캠] → [WPF 프로그램 (C#)] ──HTTP 요청: 사진 + 기대 개수──▶ [FastAPI 서버 (Python)] → YOLO → 판정 → MSSQL
+              ▲                                                        │
+              └──────────── HTTP 응답 {"result":"OK", "counts":...} ◀──┘
+```
+
+지금까지 만든 것은 **오른쪽 절반(서버)**입니다. 서버는 브라우저의 `/docs` 화면으로 시험했습니다.
+지금 만드는 것은 **왼쪽 절반** — 현장 작업자가 실제로 쓰는 화면입니다. 브라우저 `/docs`를 대신할 "우리 프로그램"입니다.
+
+WPF 파트는 세 단계입니다.
+
+```
+① 화면 배치 (XAML)           ← 지금 여기. 눌러도 아무 일 없는 화면
+② 웹캠 → 화면에 프레임 표시
+③ "검사" 버튼 → HTTP 요청 → 응답을 화면에 표시
+```
+
+### 5-6. C# · .NET · WPF · XAML — 네 단어의 관계
+
+Python 세계와 1:1로 대응시키면 이렇습니다.
+
+| Python 쪽 | C# 쪽 | 역할 |
+|---|---|---|
+| Python (언어) | **C#** | 문법. 코드를 적는 언어 |
+| `python.exe` + 표준 라이브러리 | **.NET (런타임)** | 코드를 실제로 돌리는 것 + 기본 기능(파일, 네트워크, 문자열…) |
+| Python 설치 + pip | **.NET SDK** (`dotnet` 명령) | 개발 도구. 빌드·실행·패키지 설치 |
+| tkinter / PyQt | **WPF** | .NET 안에 들어 있는 "윈도우 창 만드는 라이브러리" |
+| (해당 없음) | **XAML** | WPF 화면 배치를 적는 파일 형식. 언어라기보다 **설정 파일** |
+| PyPI (`pip install`) | **NuGet** (`dotnet add package`) | 패키지 저장소 |
+
+포함 관계:
+
+```
+.NET SDK  (dotnet 명령 — 빌드·실행 도구)
+ └─ .NET 런타임
+     ├─ 기본 라이브러리  System.*            (파일, HTTP, JSON …)
+     └─ WPF              System.Windows.*    ← 창·버튼·그림. 우리가 쓰는 부분
+
+C# 코드가 위의 것들을 부른다. XAML 은 WPF 화면 배치를 적는 별도 파일이다.
+```
+
+**한 줄 요약: C#으로 쓴 코드가 .NET 위에서 돌고, 그중 WPF 라이브러리로 창을 만들며, 창의 배치는 XAML 파일에 적는다.**
+
+### 5-7. 웹(지금까지)과 뭐가 다른가
+
+**지금까지 — FastAPI.** `uvicorn`을 켜면 서버 프로세스가 요청을 기다립니다. 브라우저가 `http://localhost:8000/docs`를 열면 서버가 HTML을 보내고 **브라우저(크롬)가 화면을 그립니다.** 우리는 화면 코드를 한 줄도 쓴 적이 없습니다 — `/docs`는 FastAPI가 자동으로 만든 것입니다.
+
+**WPF.** 브라우저가 없습니다. `dotnet run`을 하면 `.exe` 프로그램이 뜨고 **윈도우 운영체제가 직접 창을 그립니다.** 메모장·계산기와 같은 종류의 프로그램입니다.
+이 프로그램은 서버가 아니라 **클라이언트**입니다. 브라우저가 하던 일(요청 보내기, 응답 받아 보여주기)을 **우리 코드가 직접** 합니다.
+
+| | 웹 (지금까지) | 데스크톱 (WPF) |
+|---|---|---|
+| 화면을 그리는 것 | 브라우저 | 우리 프로그램 + 윈도우 |
+| 화면 배치 | HTML | **XAML** |
+| 모양(색·크기·여백) | CSS | XAML 속성 (`Width`, `Margin` …) |
+| 동작(클릭하면 무엇을) | JavaScript | **C#** (`.xaml.cs`) |
+| 실행 | 서버 켜두고 주소 접속 | exe 실행 (`dotnet run`) |
+| 서버와 대화 | 브라우저가 알아서 | `HttpClient`로 우리가 직접 |
+
+시연 때는 **프로세스 두 개**가 돕니다 — 터미널 1: `uvicorn`(서버), 터미널 2: WPF(클라이언트). 둘은 같은 PC라 `localhost`로 HTTP 대화를 합니다. 웹캠은 PC에 꽂힌 장치라 브라우저보다 데스크톱 프로그램이 다루기 자연스럽습니다.
+
+### 5-8. `dotnet run` 하면 무슨 일이 일어나나
+
+Python은 `python main.py` 한 번이면 인터프리터가 한 줄씩 읽어 실행합니다. C#은 **두 단계**입니다.
+
+```
+① 빌드   .csproj 읽기 → XAML 처리 → C# 컴파일 → bin\Debug\net10.0-windows\SmartFactoryVision.Client.exe
+② 실행   exe 시작 → App 객체 → StartupUri 의 MainWindow 열기 → 창 표시 → 이벤트 루프
+```
+
+**① 빌드 세부**
+
+1. `SmartFactoryVision.Client.csproj`를 읽습니다. 프로젝트 설정 파일 — "WPF를 쓴다(`UseWPF`), .NET 10 윈도우용(`net10.0-windows`), exe를 만든다(`WinExe`)". Python의 `requirements.txt`와 실행 설정을 합친 것입니다.
+2. XAML 처리기가 `MainWindow.xaml`을 읽어 두 가지를 만듭니다.
+   - `obj\...\MainWindow.baml` — XAML을 기계가 빨리 읽는 형태로 압축한 것. exe 안에 박힙니다.
+   - `obj\...\MainWindow.g.cs` — **자동 생성 C# 파일.** `x:Name`을 붙인 요소마다 변수를 하나씩 만들어 둡니다. 실제로 이렇게 생겼습니다.
+     ```csharp
+     internal System.Windows.Controls.Image CameraImage;
+     internal System.Windows.Controls.ComboBox CameraIndexBox;
+     internal System.Windows.Controls.Button OpenCameraButton;
+     ```
+3. C# 컴파일러가 `.cs` 파일 전부(내가 쓴 것 + 자동 생성된 것)를 번역해 `.dll`과 `.exe`를 만듭니다. **문법 오류는 여기서 걸립니다.**
+
+**② 실행 세부**
+
+1. exe가 시작되면 `App` 클래스(`App.xaml.cs`)의 객체가 만들어집니다. `App.xaml`의 `StartupUri="MainWindow.xaml"`이 "첫 창은 이것"이라는 뜻입니다.
+2. `MainWindow` 객체가 만들어지고 생성자 `MainWindow()`가 실행됩니다. 그 안의 `InitializeComponent()`가 baml을 읽어 Grid·Button·TextBox… 객체를 **실제로 만들고**, `x:Name` 변수에 연결합니다(g.cs의 `Connect` 함수가 그 일을 합니다).
+3. 창이 표시됩니다. 그 뒤 프로그램은 **이벤트 루프**에 들어갑니다 — "클릭이나 키 입력이 오면 해당 함수를 실행하고, 없으면 대기". uvicorn이 HTTP 요청을 기다리는 것과 같은 구조인데, 기다리는 것이 HTTP가 아니라 마우스·키보드입니다.
+4. 창을 닫으면 루프가 끝나고 프로그램이 종료됩니다.
+
+### 5-9. 파일별 역할
+
+| 파일 | 누가 쓰나 | 역할 |
+|---|---|---|
+| `SmartFactoryVision.Client.csproj` | `dotnet new`가 생성 | 프로젝트 설정. 패키지를 추가하면 여기 한 줄 늘어난다 |
+| `App.xaml` / `App.xaml.cs` | 생성됨. 거의 안 건드림 | 프로그램 전체를 뜻하는 객체. 첫 창 지정 |
+| `MainWindow.xaml` | **나** | 화면 배치 |
+| `MainWindow.xaml.cs` | **나** | 화면 동작 |
+| `AssemblyInfo.cs` | 생성됨 | 메타 정보. 무시 |
+| `obj/` | 빌드가 생성 | 중간 산출물 (`.g.cs`, `.baml`) |
+| `bin/` | 빌드가 생성 | 완성된 exe |
+
+### 5-10. XAML 문법 — 태그 하나 = C# 객체 하나
+
+**XML 기본 규칙**
+
+- `<태그이름 속성="값">자식들</태그이름>`. 자식이 없으면 `<태그 속성="값" />`로 한 번에 닫습니다.
+- 대소문자를 구분합니다. `<button>`은 없습니다.
+- 속성값은 숫자라도 항상 따옴표: `Width="300"`.
+- 주석은 `<!-- -->`. 주석 안에 `--`를 쓰면 오류입니다.
+
+**핵심 원리.** 이 한 줄이 XAML의 전부입니다.
+
+```xml
+<Button x:Name="InspectButton" Content="검사" Height="40" />
+```
+
+이것은 C#으로 쓰면 다음과 **완전히 같습니다.**
+
+```csharp
+Button InspectButton = new Button();   // new = 객체 만들기. Python 의  InspectButton = Button()
+InspectButton.Content = "검사";
+InspectButton.Height = 40;
+```
+
+즉 XAML은 **"객체를 만들고 속성을 채우는 C# 코드"를 태그로 짧게 쓴 것**입니다. 태그 이름 = 클래스 이름, 속성 이름 = 그 클래스의 속성 이름. 그래서 `Hieght`처럼 오타를 내면 "Button에 그런 속성 없음"이라는 빌드 오류가 납니다.
+
+**파일을 위에서부터**
+
+| 줄 | 뜻 |
+|---|---|
+| `<Window x:Class="SmartFactoryVision.Client.MainWindow"` | 창 자체(Window 객체). `x:Class`는 "이 XAML의 짝이 되는 C# 클래스는 이것" → `MainWindow.xaml.cs`의 `partial class MainWindow` |
+| `xmlns="http://…/presentation"` | **네임스페이스.** "접두어 없는 태그(`Grid`, `Button`…)는 WPF 사전에서 찾아라". 주소처럼 생겼지만 인터넷에 접속하지 않습니다. 그냥 고유한 이름표입니다 |
+| `xmlns:x="…/xaml"` | `x:` 접두어가 붙은 것(`x:Name`, `x:Class`)은 XAML 자체 문법 사전에서 찾아라 |
+| `xmlns:d`, `xmlns:mc`, `mc:Ignorable="d"` | 비주얼 스튜디오 디자이너용. 우리는 안 씁니다. 지워도 되지만 그대로 둡니다 |
+| `xmlns:local="clr-namespace:SmartFactoryVision.Client"` | 내 프로젝트의 클래스를 XAML에서 `local:` 접두어로 쓸 때. 지금은 안 씁니다 |
+| `Title="…" Height="640" Width="960"` | Window 객체의 속성 |
+| `<Grid Margin="10">` | Window 안의 자식은 **하나만** 들어갈 수 있어서, 그 하나를 배치 틀로 씁니다. Grid = 표. Margin = 바깥 여백 |
+| `<Grid.ColumnDefinitions>` | **속성 요소 문법.** `ColumnDefinitions`는 목록이라 `="…"`로 못 적어 태그로 펼친 것. `Grid.`이 붙어 있으면 "Grid의 속성"이라는 표시 |
+| `<ColumnDefinition Width="*" />` / `"300"` | 열 폭. `*` = 남는 공간 전부, `300` = 고정, `Auto` = 내용물 크기. 열 번호는 **0부터** |
+| `<Border Grid.Column="0" …>` | 테두리·배경을 그리는 틀. `Grid.Column="0"`은 **첨부 속성** — Border 자신의 속성이 아니라 **부모 Grid가 "너는 0열"이라고 붙여둔 메모**. 문법이 `부모클래스.속성`인 이유. `Grid.Row`를 생략하면 0 |
+| `<Image x:Name="CameraImage" Stretch="Uniform" />` | 그림 표시 칸. `Source`(그림 자체)는 비어 있고 코드에서 채웁니다. `Stretch="Uniform"` = 비율 유지하며 칸에 맞춤 |
+| `<StackPanel Grid.Column="1" …>` | 자식을 **위→아래**로 쌓는 틀. `Orientation="Horizontal"`이면 좌→우 |
+| `<TextBlock Text="카메라 번호" />` | 읽기 전용 글자. **`TextBlock` = 표시, `TextBox` = 입력** |
+| `<ComboBox x:Name="CameraIndexBox" SelectedIndex="0">` + `<ComboBoxItem Content="0" />` | 드롭다운. 자식 `ComboBoxItem`이 항목. `SelectedIndex="0"` = 첫 항목이 기본 선택 |
+| `<Button Content="카메라 열기" />` | `Content` = 버튼 안에 보이는 것. 글자뿐 아니라 그림도 넣을 수 있어서 `Text`가 아니라 `Content` |
+| `<TextBox x:Name="BoltExpectedBox" Text="0" Width="60" />` | 입력칸. 코드에서 `.Text`로 읽으면 **문자열** `"3"`이 옵니다 → 숫자로 바꾸는 건 C# 몫 |
+| `VerticalAlignment="Center"` / `HorizontalAlignment="Center"` | 자기 칸 안에서 세로/가로 정렬 |
+| `FontSize="48" FontWeight="Bold"` | 글자 크기·굵기 |
+| `Foreground="Gray"` | 글자색. `Background`는 배경색 |
+| `TextWrapping="Wrap"` | 글이 넘치면 줄바꿈 |
+| `Margin="0,16,0,8"` | **왼쪽, 위, 오른쪽, 아래.** CSS(위·오·아·왼)와 순서가 다릅니다 |
+
+**`x:Name`의 실체.** 5-8의 `g.cs`에 `internal Image CameraImage;`가 자동으로 생겼습니다. 그래서 `.xaml.cs`에서 `CameraImage.Source = …`라고 쓸 수 있습니다. `x:Name`이 없는 `TextBlock`("카메라 번호")은 변수가 안 생기므로 코드에서 못 만집니다 — 만질 일이 없어서 이름을 안 붙인 것입니다.
+
+### 5-11. C# 문법 — `MainWindow.xaml.cs`의 지금 내용
+
+```csharp
+using System.Windows;                  // Python 의 import. System.Windows 안의 Window 클래스를 짧은 이름으로 쓰려고
+
+namespace SmartFactoryVision.Client;   // 이 파일의 클래스가 속한 "성(姓)". 다른 프로젝트의 MainWindow 와 구분한다.
+                                       // Python 의 패키지 경로 같은 것. 끝의 세미콜론은 "이 파일 전체가 이 namespace" 라는 뜻
+
+public partial class MainWindow : Window   // 클래스 선언.
+                                           //   public  = 다른 곳에서 접근 가능
+                                           //   partial = 이 클래스의 나머지가 다른 파일(g.cs)에 이어 쓰여 있다
+                                           //   : Window = Window 를 상속. Python 의  class MainWindow(Window):
+{                                      // Python 의 들여쓰기 대신 중괄호로 블록을 만든다
+    public MainWindow()                // 생성자 = Python 의 __init__. 클래스와 이름이 같고 반환형을 안 쓴다
+    {
+        InitializeComponent();         // g.cs 에 있는 함수. XAML 을 읽어 화면 요소를 만들고 x:Name 을 연결한다.
+                                       // 문장 끝은 반드시 세미콜론
+    }
+}
+```
+
+Python과 다른 점 정리:
+
+| Python | C# |
+|---|---|
+| `import x` | `using x;` |
+| 들여쓰기로 블록 | `{ }`로 블록. 들여쓰기는 보기 좋으라고만 |
+| 줄 끝 아무것도 없음 | 문장 끝 `;` |
+| `n = 3` | `int n = 3;` — **타입을 먼저 쓴다** |
+| `class A(B):` | `class A : B` |
+| `def __init__(self):` | `public A()` |
+| `self.x` | `this.x` (대부분 `this` 생략 가능) |
+| `# 주석`, docstring | `// 주석`, `/// <summary>` |
+| `None` | `null` |
+| `True` / `False` | `true` / `false` |
+
+템플릿이 넣어 둔 `using` 10줄 중 대부분은 지금 안 씁니다. `.csproj`의 `ImplicitUsings`가 `System` 같은 기본 것은 자동으로 넣어 주기도 합니다.
+
+### 5-12. 다음 두 단계가 이 원리 위에 어떻게 올라가나
+
+**② 웹캠.** OpenCvSharp(= C#의 `cv2`)의 `VideoCapture`로 프레임을 읽습니다(`Mat`, cv2와 같은 이름). 그것을 WPF가 그릴 수 있는 형식(`BitmapSource`)으로 바꿔 `CameraImage.Source`에 넣습니다. 타이머로 약 33ms마다 반복하면 영상처럼 보입니다. 버튼과 코드는 **이벤트**로 잇습니다 — XAML에 `Click="OpenCameraButton_Click"`을 쓰고, `.xaml.cs`에 같은 이름의 함수를 만들면 "버튼이 눌리면 이 함수를 불러라"가 됩니다.
+
+**③ 검사.** `InspectButton_Click`에서 현재 프레임을 JPEG로 인코딩하고, `HttpClient`로 multipart POST를 보냅니다 — `/docs`에서 Execute를 눌렀을 때 브라우저가 하던 일을 우리 코드가 합니다. 응답 JSON을 `System.Text.Json`으로 읽어 `ResultText.Text`, `CountText.Text`에 넣습니다.
+
 ---
 
 ## 6. 개발 환경 도구들

@@ -271,6 +271,28 @@ dotnet build wpf-client\SmartFactoryVision.Client.csproj
 - `bin/`, `obj/`가 `.gitignore`로 제외되는 것을 `git status --ignored`로 확인했다.
 - 실제 소스 파일이 생겼으므로 `ai-server/.gitkeep`, `wpf-client/.gitkeep`은 제거했다.
 
+### 6-1. OpenCvSharp 패키지 3개 — 2026-09-26
+
+```powershell
+dotnet add wpf-client\SmartFactoryVision.Client.csproj package OpenCvSharp4              # C# 용 OpenCV 껍데기
+dotnet add wpf-client\SmartFactoryVision.Client.csproj package OpenCvSharp4.runtime.win  # 윈도우용 실제 엔진 DLL
+dotnet add wpf-client\SmartFactoryVision.Client.csproj package OpenCvSharp4.WpfExtensions # Mat → WPF BitmapSource 변환
+```
+
+- **왜:** WPF 검사 화면 ②(웹캠 프레임 표시)에 필요. `pip install`에 해당하며 `.csproj`에 `PackageReference` 3줄이 자동으로 늘었다. 셋 다 `4.13.0.20260627`.
+- **막힌 것:** 설치 직후 첫 빌드가 `MainWindow.g.cs 소스 파일을 찾을 수 없습니다`(CS2001)로 실패.
+- **해결:** 패키지 복원이 `obj/`를 갈아엎어 자동 생성 파일이 한 번 사라진 것. `dotnet build`를 한 번 더 돌리니 경고 0 / 오류 0. 패키지를 추가한 뒤 이 오류가 나면 재빌드가 답이다.
+
+### 6-2. XAML 연습장 `dev\wpf-playground` — 2026-09-25
+
+```powershell
+dotnet new wpf -o C:\Users\kimde\Desktop\dev\wpf-playground -n Playground
+```
+
+- **왜:** 사용자가 XAML·C# 문법을 검사 화면과 분리해 실습할 곳을 요청. 프로젝트 저장소 **밖**이라 git과 무관. 연습 4개는 그 폴더의 `연습.md`.
+- **막힌 것:** Git Bash에서 `dotnet run --project C:\Users\...` 가 `C:Userskimde...`로 깨짐 — Git Bash는 `\`를 이스케이프 문자로 먹는다.
+- **해결:** 프로젝트 폴더 안에서 `dotnet run`, 또는 경로를 `/c/Users/...`로. PowerShell은 `\` 그대로 된다.
+
 ## 7. 폴더 구조 스캐폴딩
 
 ```powershell

@@ -1,12 +1,80 @@
-﻿<Window x:Class="SmartFactoryVision.Client.MainWindow"
+﻿<!--
+  이 파일은 검사 화면의 "배치"만 정한다. 버튼을 누르면 무슨 일이 일어나는지는 MainWindow.xaml.cs 가 담당한다.
+  실행 흐름: 프로그램이 켜지면 App.xaml 이 이 창을 연다 → 사용자가 카메라를 열고 → "검사" 버튼 →
+            .xaml.cs 가 프레임을 FastAPI /inspect 로 보내고 → 응답을 아래 ResultText·CountText 에 써 넣는다.
+  알아야 할 개념: XAML 은 HTML 처럼 태그로 화면을 적는 형식이다. 태그 하나 = 화면 요소 하나.
+                  x:Name 을 붙인 요소만 .xaml.cs 에서 그 이름으로 만질 수 있다.
+-->
+<Window x:Class="SmartFactoryVision.Client.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SmartFactoryVision.Client"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="스마트팩토리 비전 검사" Height="640" Width="960">
 
+    <!-- Margin="10": 창 테두리와 내용 사이 여백 10픽셀. 없으면 화면이 창에 딱 붙어 답답하다 -->
+    <Grid Margin="10">
+
+        <!-- 열을 두 개로 나눈다. 왼쪽은 카메라(남는 공간 전부), 오른쪽은 조작판(300픽셀 고정) -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="300" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 왼쪽 열: 카메라 미리보기.
+             Image 의 Source 는 .xaml.cs 가 프레임마다 바꿔 넣는다. 지금은 비어 있어서 검은 배경만 보인다.
+             Stretch="Uniform": 비율을 유지한 채 칸에 맞춰 키운다(1:1 크롭 사진이 찌그러지지 않게) -->
+        <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Background="Black">
+            <Image x:Name="CameraImage" Stretch="Uniform" />
+        </Border>
+
+        <!-- 오른쪽 열: 조작판. StackPanel 은 자식을 위에서 아래로 차곡차곡 놓는다 -->
+        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+
+            <!-- 카메라 번호 선택. 내장 0번 / USB 1번이 PC 마다 달라서 화면에서 고른다 (상태판 9/22 결정).
+                 SelectedIndex="0": 처음 켜면 첫 항목("0")이 선택돼 있다 -->
+            <TextBlock Text="카메라 번호" />
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+                <ComboBox x:Name="CameraIndexBox" Width="80" SelectedIndex="0">
+                    <ComboBoxItem Content="0" />
+                    <ComboBoxItem Content="1" />
+                    <ComboBoxItem Content="2" />
+                </ComboBox>
+                <!-- Click="…": 누르면 .xaml.cs 의 같은 이름 함수가 실행된다 (이벤트 연결) -->
+                <Button x:Name="OpenCameraButton" Content="카메라 열기" Width="100" Margin="8,0,0,0" Click="OpenCameraButton_Click" />
+            </StackPanel>
+
+            <!-- 기대 개수 입력 3칸. /inspect 요청의 bolt·nut·washer Form 값이 여기서 나온다.
+                 TextBox 는 글자 입력칸이라 "3" 이 문자열로 들어온다. 숫자로 바꾸는 것은 .xaml.cs 몫 -->
+            <TextBlock Text="기대 개수" />
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock Text="볼트" Width="50" VerticalAlignment="Center" />
+                <TextBox x:Name="BoltExpectedBox" Text="0" Width="60" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock Text="너트" Width="50" VerticalAlignment="Center" />
+                <TextBox x:Name="NutExpectedBox" Text="0" Width="60" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+                <TextBlock Text="와셔" Width="50" VerticalAlignment="Center" />
+                <TextBox x:Name="WasherExpectedBox" Text="0" Width="60" />
+            </StackPanel>
+
+            <!-- 검사 버튼. 누르면 현재 프레임을 서버로 보낸다(다음 단계) -->
+            <Button x:Name="InspectButton" Content="검사" Height="40" FontSize="16" />
+
+            <!-- 판정 결과. 서버 응답의 "result"(OK/NG) 가 들어간다. 멀리서도 보이게 크게 -->
+            <TextBlock x:Name="ResultText" Text="-" FontSize="48" FontWeight="Bold"
+                       HorizontalAlignment="Center" Margin="0,16,0,8" />
+
+            <!-- 세어진 개수. 서버 응답의 "counts" 가 "볼트 3 / 너트 3 / 와셔 3" 꼴로 들어간다 -->
+            <TextBlock x:Name="CountText" Text="볼트 - / 너트 - / 와셔 -" HorizontalAlignment="Center" />
+
+            <!-- 상태 메시지. "카메라 열림", "서버 연결 실패" 같은 안내. TextWrapping: 길면 줄바꿈 -->
+            <TextBlock x:Name="StatusText" Text="카메라를 열어 주세요" Foreground="Gray"
+                       Margin="0,16,0,0" TextWrapping="Wrap" />
+        </StackPanel>
     </Grid>
 </Window>
