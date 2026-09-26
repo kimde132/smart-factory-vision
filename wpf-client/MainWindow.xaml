@@ -62,8 +62,8 @@
                 <TextBox x:Name="WasherExpectedBox" Text="0" Width="60" />
             </StackPanel>
 
-            <!-- 검사 버튼. 누르면 현재 프레임을 서버로 보낸다(다음 단계) -->
-            <Button x:Name="InspectButton" Content="검사" Height="40" FontSize="16" />
+            <!-- 검사 버튼. 누르면 .xaml.cs 의 InspectButton_Click 이 현재 프레임을 /inspect 로 보낸다 -->
+            <Button x:Name="InspectButton" Content="검사" Height="40" FontSize="16" Click="InspectButton_Click" />
 
             <!-- 판정 결과. 서버 응답의 "result"(OK/NG) 가 들어간다. 멀리서도 보이게 크게 -->
             <TextBlock x:Name="ResultText" Text="-" FontSize="48" FontWeight="Bold"

@@ -5,7 +5,7 @@
 > 작성: Claude — **커밋할 때마다 함께 갱신한다.** 낡은 상태판은 없느니만 못하다.
 > 판단과 근거는 여기 쓰지 않는다. `decisions.md`가 담당한다. 이 파일은 **포인터**다.
 >
-> 최종 갱신: **2026-09-26** (WPF ① 화면 배치 + ② 웹캠 미리보기 동작. **다음은 ③ "검사" 버튼 → `/inspect` 호출 → 결과 표시**)
+> 최종 갱신: **2026-09-26** (**WPF 최소 검사 화면 완료** ①배치 ②웹캠 ③검사 호출. 4가지 확인(OK/NG/비숫자/서버 꺼짐) 통과. **다음은 Excel 이력 시트**)
 
 ---
 
@@ -42,17 +42,19 @@
 | 학습·실패 분석·재학습 사이클 2바퀴 (EXP-01→03), 최종 test 91.4% | ✅ **AI 파트 닫음 9/20** |
 | FastAPI `POST /inspect` | ✅ 9/20 |
 | MSSQL 저장 (SQLAlchemy·Alembic) | ✅ 9/22 |
-| **WPF 검사 화면** — 웹캠 촬영 → `/inspect` 호출 → OK/NG 표시 | 🔶 **9/26 ①배치·②웹캠 완료, ③검사 호출 남음.** 원서 모드(사용자 결정 9/25, `work-grades.md` #23). 9/22~24 3일이 통째로 밀려 예비일까지 씀 |
+| **WPF 검사 화면** — 웹캠 촬영 → `/inspect` 호출 → OK/NG 표시 | ✅ **9/26.** 원서 모드(사용자 결정 9/25, `work-grades.md` #23). 9/22~24 3일이 통째로 밀려 예비일까지 씀. 시연 스크린샷은 기숙사 복귀 후 |
 | Excel 추출 — 검사 이력 시트 | ⬜ pandas라 짧다 |
 | `GET /history` + WPF 이력 조회 화면 | ⬜ 버릴 순서 1번 |
 | Excel 요약 시트 / 실시간 박스 / MVVM | ⬜ 버릴 순서 2·3·4번 |
 | README (Claude) | ⬜ 마지막 |
 | (선택) 사진 경로 컬럼 마이그레이션 / 겹침 추가 촬영·재학습 / 대조 실험 / `predict_count.py --iou` | ⬜ 시간 남으면 |
 
-**순서 확정(9/22):** WPF 최소 검사 화면 → Excel 이력 시트 → README. **다음 첫 한마디: "WPF ③ 시작하자"**
+**순서 확정(9/22):** WPF 최소 검사 화면 → Excel 이력 시트 → README. **다음 첫 한마디: "Excel 시작하자"** (등급을 먼저 묻는다)
 
-> **9/26 WPF 진행 상황.** `wpf-client/MainWindow.xaml`(배치) + `MainWindow.xaml.cs`(카메라 열기·타이머·프레임 표시). OpenCvSharp 3패키지(`setup-log.md` 6-1).
-> ③에서 할 일: `InspectButton`에 `Click` → 현재 `_frame`을 JPEG로 인코딩 → `HttpClient` multipart POST `/inspect`(bolt·nut·washer는 TextBox에서 `int.Parse`) → 응답 JSON `result`·`counts` → `ResultText`·`CountText`.
+> **9/26 WPF 완료.** `wpf-client/MainWindow.xaml`(배치) + `MainWindow.xaml.cs`(카메라 열기·타이머·프레임 표시·`/inspect` 호출). OpenCvSharp 3패키지(`setup-log.md` 6-1).
+> 흐름: 카메라 열기 → `VideoCapture` + `DispatcherTimer` 33ms → `Timer_Tick`이 `_frame`을 `CameraImage.Source`에 / 검사 → `_frame.ImEncode(".jpg")` → `HttpClient` multipart POST `localhost:8000/inspect` → `JsonDocument`로 `result`·`counts` → `ResultText`(OK 초록/NG 빨강)·`CountText`.
+> 시연 때 터미널 2개: `ai-server`에서 `.venv/Scripts/uvicorn main:app` + 최상위에서 `dotnet run --project wpf-client`.
+> 남은 소소한 것(범위 밖, 시간 남으면): 서버 응답 100초 타임아웃 시 `TaskCanceledException`은 안 잡는다 / 미리보기에 1:1 크롭 영역 표시 없음.
 > 이해 수준 합의(9/26): **지금은 1단계(주석 보고 무슨 일 하는지 안다), 면접 전에 2단계(주석 없이 흐름 설명).** 방법은 `foundations.md` 5-5~5-12 + `dev\wpf-playground\연습.md`.
 > C#·XAML 기초 해설은 `foundations.md` **5-5 ~ 5-12**(9/25 추가). 연습장은 저장소 밖 `dev\wpf-playground`.
 

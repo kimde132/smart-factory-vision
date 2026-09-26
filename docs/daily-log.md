@@ -50,6 +50,46 @@
 
 ---
 
+## 2026-09-25 (목) ~ 09-26 (금) — WPF 검사 화면 (본가, 추석 연휴)
+
+> 9/22~24 사흘은 작업 기록이 없다(연휴 이동·원서 추정). WPF 3일치가 통째로 밀린 채 9/25에 시작해 9/26에 최소 화면을 닫았다. 예비일까지 쓴 셈.
+
+**한 일**
+- **등급 결정: WPF는 원서 모드**(사용자 9/25) — Claude가 왜·어떻게를 설명하고 코드를 보여 주면 사용자가 따라 친다. `work-grades.md` #23(사용자 작성)
+- **① XAML 배치** — `MainWindow.xaml`. 2열 Grid(카메라 미리보기 / 조작판), 카메라 번호 콤보박스, 기대 개수 TextBox 3개, 검사 버튼, 결과·개수·상태 TextBlock. 사용자가 치고 첫 실행에 창이 떴다
+- **C#·XAML 기초 해설** — 사용자가 "코드는 되는데 단 하나도 모르겠다"고 해서 순서를 바꿨다. `foundations.md` **5-5~5-12**: 큰 그림(WPF = 브라우저 대신 우리가 만든 클라이언트) / C#·.NET·WPF·XAML 관계를 Python에 1:1 대응 / 웹과 데스크톱 차이 / `dotnet run`이 하는 일(빌드 → 실행) / 파일·확장자 역할 / "태그 하나 = C# 객체 하나" / C# 문법을 Python과 표로 비교
+- **XAML 연습장** `dev\wpf-playground`(저장소 밖) + `연습.md` 4개 — 태그·속성 → StackPanel → Grid·`Grid.Column` → **`x:Name` + `Click` + C# 첫 함수(횟수 세기)**. 사용자가 4개 완료(9/25 밤~9/26)
+- **② 웹캠 미리보기** — OpenCvSharp 3패키지(Claude, `setup-log.md` 6-1). 사용자가 `MainWindow.xaml.cs` 전체를 침: `VideoCapture` + `DispatcherTimer` 33ms → `Timer_Tick`이 `_frame.ToBitmapSource()`를 `CameraImage.Source`에. `OnClosed`에서 `Release`. 커밋 `e3c2016`
+- **③ 검사 호출** — `InspectButton_Click`(async): TextBox 3개 `int.TryParse` → `_frame.ImEncode(".jpg")` → `MultipartFormDataContent`(image/bolt/nut/washer, `main.py` 인자 이름과 동일) → `HttpClient.PostAsync("inspect")` → `JsonDocument`로 `result`·`counts` → `ResultText`(OK 초록/NG 빨강)·`CountText`·`StatusText`. **4가지 확인 통과**: 빈 책상 0/0/0 → OK, 기대 2 → NG, `abc` → 안내, 서버 끔 → 연결 실패 안내
+- **주석 재작성**(Claude) — 사용자가 "다시 읽고 이해할 수 있게"를 요청. 파일 상단에 함수 5개의 호출 순서 지도·자료 모양, 처음 나오는 문법마다 이름과 Python 대응(`out`, `using var`, `async/await`, `??`, `? :`, `override`, 객체 초기화). 코드 본문은 그대로
+
+**막힌 것 / 어떻게 풀었나**
+- **Git Bash에서 `dotnet run --project C:\Users\...` → `C:Userskimde...`로 깨짐.** Git Bash는 `\`를 이스케이프로 먹는다 → 폴더 안에서 `dotnet run`, 또는 `/c/Users/...`. PowerShell은 `\` 그대로
+- **패키지 설치 직후 첫 빌드 `MainWindow.g.cs 소스 파일을 찾을 수 없습니다`(CS2001)** → 복원이 `obj/`를 갈아엎은 것. 재빌드로 끝
+- **`'Window'은(는) 모호한 참조`(CS0104)** — `OpenCvSharp.Window`와 `System.Windows.Window` 충돌 → `using Window = System.Windows.Window;` 별칭. Python의 `import as`와 같다고 설명
+- **`HttpClient 형식을 찾을 수 없습니다`(CS0246)** — Claude 실수. "ImplicitUsings가 `System.Net.Http`를 넣어 준다"고 썼는데 **WPF 프로젝트는 그 항목이 빠진다.** `using System.Net.Http;` 추가. 아래 빨간 줄 여러 개가 전부 같은 원인이라는 것("맨 위 오류부터 고친다")을 함께 설명
+- **PowerShell 5.1에서 `git commit -F -`에 here-string을 파이프하면 커밋 메시지가 파일 경로로 해석됨** → `-m @'…'@`로. Claude 쪽 도구 문제
+- 사용자가 XAML을 친 뒤 "코드는 되는데 WPF·.NET·C#·문법·파일·실행 원리 전부 모르겠다" → 위 해설과 연습장으로 대응. **이해 수준 합의(9/26): 지금은 1단계(주석 보고 무슨 일 하는지 안다), 면접 전에 2단계(주석 없이 흐름 설명). 3단계(혼자 쓰고 고친다)는 지금 목표 아님.** 방법: 주석 가리고 읽기 / 연습장에서 안 보고 재현 / 일부러 고장내기
+- 사용자 질문 "C# Dev Kit 설치했는데 로그인 건너뛰었다, 괜찮나" → VS Code 확장 3개(`csdevkit`·`csharp`·`vscode-dotnet-runtime`) 정상 조합, 로그인은 선택, `dotnet` 명령으로 빌드하므로 무관
+
+**환경·설정 변경**
+- `wpf-client/SmartFactoryVision.Client.csproj`에 `PackageReference` 3줄 — `OpenCvSharp4`, `OpenCvSharp4.runtime.win`, `OpenCvSharp4.WpfExtensions` 모두 `4.13.0.20260627`
+- WPF 서버 주소 `http://localhost:8000/` 하드코딩(`_http.BaseAddress`). 서버가 다른 PC로 가면 여기만 바꾼다
+- 촬영·모델·DB 변경 없음. **본가 환경(로지텍 웹캠, 트레이 없음)이라 판정 성능은 보지 않았다** — 0/0/0 빈 책상만
+- 저장소 밖에 `dev\wpf-playground` 생성(연습용, git 무관)
+
+**다음에 이어서**
+- **Excel 이력 시트** — `inspection` 표 → pandas → `.xlsx`. 등급을 먼저 묻는다. 그 뒤 README(Claude, 전체 파일 제공)
+- 기숙사 복귀 후 30분: 원래 세팅(레이저 웹캠·삼각대·20cm·천장등)에서 WPF로 실제 트레이 판정 → 스크린샷·영상. **첫 웹캠-라이브 판정 결과는 여기서 처음 나온다**
+- 면접 전: WPF 2단계 이해(위 방법 셋)
+
+**메모 / 궁금한 것**
+- `InspectButton_Click`이 `HttpRequestException`만 잡는다. 서버가 100초 넘게 안 답하면 `TaskCanceledException`으로 앱이 죽는다. CPU 추론 0.2초라 실제로는 안 나지만, 범위 밖 항목으로 상태판에 남김
+- 미리보기에 서버가 자를 1:1 영역 표시가 없다. 시연 때 트레이를 가운데 두면 되지만, 시간 남으면 사각형 하나
+- 면접 예상 질문: "왜 WPF에서 안 자르고 서버에서 자르나" → 크롭 규칙(D-007 F)이 한 곳(`main.py`)에만 있어야 스크립트 채점(`predict_count.py`)과 운영이 같은 그림을 본다
+
+---
+
 ## 2026-09-21 (월) ~ 09-22 새벽 — DB 기초 · `db.py`
 
 > DB 파트 시작. 사용자에게 DB 시스템은 처음이라 개념과 SSMS 실습부터 했다.
