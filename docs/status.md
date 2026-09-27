@@ -54,6 +54,7 @@
 > **9/26 WPF 완료.** `wpf-client/MainWindow.xaml`(배치) + `MainWindow.xaml.cs`(카메라 열기·타이머·프레임 표시·`/inspect` 호출). OpenCvSharp 3패키지(`setup-log.md` 6-1).
 > 흐름: 카메라 열기 → `VideoCapture` + `DispatcherTimer` 33ms → `Timer_Tick`이 `_frame`을 `CameraImage.Source`에 / 검사 → `_frame.ImEncode(".jpg")` → `HttpClient` multipart POST `localhost:8000/inspect` → `JsonDocument`로 `result`·`counts` → `ResultText`(OK 초록/NG 빨강)·`CountText`.
 > 시연 때 터미널 2개: `ai-server`에서 `.venv/Scripts/uvicorn main:app` + 최상위에서 `dotnet run --project wpf-client`.
+> **9/27 강의형 주석.** 사용자 요청("단어 단위로, 계열별 대안까지, 이름이 정해진 건지 내가 지은 건지")으로 `wpf-client/` 6개 파일 전부 주석 재작성. 각 파일 상단에 ① 키워드 / ② 라이브러리 이름 / ③ 내가 지은 이름 구분표 + using 사전표 + 키워드 계열표. 코드 본문 불변. **사용자가 읽고 틀린 주석을 고친다** — 이해 2단계 재료.
 > 남은 소소한 것(범위 밖, 시간 남으면): 서버 응답 100초 타임아웃 시 `TaskCanceledException`은 안 잡는다 / 미리보기에 1:1 크롭 영역 표시 없음.
 > 이해 수준 합의(9/26): **지금은 1단계(주석 보고 무슨 일 하는지 안다), 면접 전에 2단계(주석 없이 흐름 설명).** 방법은 `foundations.md` 5-5~5-12 + `dev\wpf-playground\연습.md`.
 > C#·XAML 기초 해설은 `foundations.md` **5-5 ~ 5-12**(9/25 추가). 연습장은 저장소 밖 `dev\wpf-playground`.

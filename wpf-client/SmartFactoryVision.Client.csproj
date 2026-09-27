@@ -1,16 +1,57 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<!--
+  ╔════════════════════════════════════════════════════════════════════════════════════╗
+  ║  SmartFactoryVision.Client.csproj : 프로젝트 설정 파일 (C Sharp PROJect)                ║
+  ╚════════════════════════════════════════════════════════════════════════════════════╝
 
+  ┌ 이 파일은 무엇이고 언제 읽히나 ─────────────────────────────────────────────────────
+  │  dotnet build / dotnet run 이 가장 먼저 읽는 파일. "이 폴더의 .cs·.xaml 을 어떻게 빌드할지" 가 적혀 있다.
+  │  Python 으로 치면 requirements.txt(패키지 목록) + 실행 설정을 합친 것.
+  │  형식은 XML. XAML 과 같은 <태그>값</태그> 문법이지만 화면과는 무관하다.
+  │
+  │  내가 직접 고치는 경우:  거의 없다. dotnet add package 가 <PackageReference> 줄을 자동으로 추가한다.
+  │  같은 폴더의 .cs / .xaml 파일은 목록에 없어도 자동으로 전부 빌드 대상이 된다(SDK 스타일 프로젝트의 규칙).
+  └────────────────────────────────────────────────────────────────────────────────────
+-->
+
+<!-- ▸ 단어 분해: <Project(최상위 태그) Sdk(어떤 빌드 규칙 묶음을 쓰나)="Microsoft.NET.Sdk"(표준 .NET SDK)>
+     ▸ 이 한 줄이 "이 폴더의 파일 전부를 알아서 찾아 빌드해라" 를 포함한다. 그래서 파일 목록을 안 적어도 된다. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ▸ <PropertyGroup> : 설정값 묶음. 안의 태그 하나가 설정 하나. -->
   <PropertyGroup>
+    <!-- ▸ OutputType : 빌드 결과물의 종류.
+         ▸ WinExe = 창 있는 프로그램(.exe). 실행해도 검은 콘솔 창이 안 뜬다.
+         ▸ 다른 선택: Exe = 콘솔 프로그램(검은 창 뜸) / Library = 실행 파일 없이 .dll 만(다른 프로그램이 가져다 씀) -->
     <OutputType>WinExe</OutputType>
+    <!-- ▸ TargetFramework : 어느 .NET 버전, 어느 운영체제용인가.
+         ▸ net10.0-windows = .NET 10, 윈도우 전용. WPF 는 윈도우에서만 돌기 때문에 -windows 가 붙는다.
+         ▸ 다른 선택: net10.0 (운영체제 무관. WPF 는 못 씀) / net8.0-windows (더 낮은 버전) -->
     <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- ▸ Nullable : "null 이 들어갈 수 있는 변수는 ? 를 붙여라" 검사를 켠다.
+         ▸ enable 이라서 VideoCapture? _capture 처럼 ? 를 안 붙이면 경고가 난다. 실수로 null 을 건드려 죽는 것을 빌드 때 잡아 주는 안전장치.
+         ▸ 다른 선택: disable = 검사 안 함(옛날 C# 방식. 경고는 없지만 실행 중 NullReferenceException 위험) -->
     <Nullable>enable</Nullable>
+    <!-- ▸ ImplicitUsings : 자주 쓰는 사전(System, System.Linq, System.IO 등)을 모든 .cs 파일에 자동으로 using 해 준다.
+         ▸ 그래서 TimeSpan, Uri, EventArgs(전부 System 소속)를 using 없이 썼다.
+         ▸ 주의: WPF 프로젝트는 System.Net.Http 가 이 자동 목록에서 빠져 있어 MainWindow.xaml.cs 에 직접 썼다.
+         ▸ 다른 선택: disable = 모든 사전을 직접 using. 파일마다 5~6줄이 더 생긴다. -->
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- ▸ UseWPF : WPF 라이브러리(System.Windows.*)를 켜고, .xaml 파일을 빌드 대상에 넣는다.
+         ▸ 이 줄이 없으면 <Window>, <Button> 같은 이름을 전부 못 찾고 .xaml 도 무시된다.
+         ▸ 다른 선택: UseWindowsForms = 더 오래된 화면 기술(WinForms). 둘 다 켤 수도 있다. -->
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <!-- ▸ <ItemGroup> : 항목 목록 묶음. 여기서는 NuGet 패키지 목록. Python 의 requirements.txt 에 해당.
+       ▸ 이 세 줄은 내가 타이핑한 게 아니라  dotnet add package 이름  명령(= pip install)이 자동으로 넣었다(setup-log.md 6-1).
+       ▸ 처음 빌드할 때 이 목록을 보고 인터넷(nuget.org)에서 받아 C:\Users\<이름>\.nuget\packages\ 에 저장한다. 두 번째부터는 저장된 것을 쓴다. -->
   <ItemGroup>
+    <!-- ▸ 단어 분해: <PackageReference(패키지 참조) Include(이름)="OpenCvSharp4" Version(버전)="4.13.0.20260627" />
+         ▸ C# 용 OpenCV 의 "껍데기". VideoCapture, Mat 같은 C# 클래스가 여기 있다. 실제 계산은 아래 runtime 이 한다. -->
     <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260627" />
+    <!-- ▸ 윈도우용 OpenCV 실제 엔진(C++ 로 된 .dll). 위 껍데기가 이것을 부른다. 없으면 실행할 때 "DllNotFoundException". -->
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20260627" />
+    <!-- ▸ Mat → BitmapSource 변환기(ToBitmapSource). OpenCV 형식과 WPF 형식을 잇는 다리. MainWindow.xaml.cs 의 using OpenCvSharp.WpfExtensions 가 이것. -->
     <PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.13.0.20260627" />
   </ItemGroup>
 

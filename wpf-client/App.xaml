@@ -1,9 +1,47 @@
-﻿<Application x:Class="SmartFactoryVision.Client.App"
+<!--
+  ╔════════════════════════════════════════════════════════════════════════════════════╗
+  ║  App.xaml : 프로그램 "전체" 를 뜻하는 객체의 설정                                        ║
+  ╚════════════════════════════════════════════════════════════════════════════════════╝
+
+  ┌ 이 파일은 무엇이고 언제 읽히나 ────────────────────────────────────────────────────
+  │  exe 가 시작되면 .NET 이 가장 먼저 이 파일의 짝(App.xaml.cs)인 App 객체를 만든다.
+  │  App 은 "창" 이 아니라 "프로그램 그 자체" 다. 창(MainWindow)은 App 이 연다.
+  │
+  │  실행 순서:  exe 시작 → App 객체 생성 → StartupUri 의 창을 만들어 연다 → 이벤트 루프(클릭 기다림) → 마지막 창이 닫히면 종료
+  │
+  │  거의 손대지 않는 파일이다. 손댈 때는 두 경우뿐:
+  │    (1) 첫 창을 바꾸고 싶다        → StartupUri
+  │    (2) 모든 창이 공유하는 색·글꼴·스타일을 한 곳에 두고 싶다 → <Application.Resources> 안
+  │
+  │  MainWindow.xaml 과의 관계:  App.xaml(StartupUri) ──열기──▶ MainWindow.xaml
+  └────────────────────────────────────────────────────────────────────────────────────
+-->
+
+<!-- ▸ 여는 태그 <Application …> 의 속성 한 줄씩. (XML 규칙: 태그 "안" 에는 주석을 못 넣어서 위에 모아 적는다)
+
+     x:Class="SmartFactoryVision.Client.App"
+       ▸ 단어 분해: Application(② WPF 클래스 = 프로그램 전체) x:Class(① 짝 C# 클래스) = "…App"(③ App.xaml.cs 의 App 클래스)
+       ▸ MainWindow.xaml 의 <Window x:Class="…MainWindow"> 와 같은 구조. 태그가 Window 가 아니라 Application 일 뿐.
+
+     xmlns / xmlns:x / xmlns:local
+       ▸ MainWindow.xaml 과 같다. 기본 사전(WPF), x: 사전(XAML 문법), local: 접두어(내 프로젝트).
+
+     StartupUri="MainWindow.xaml"
+       ▸ 단어 분해: StartupUri(② Application 의 속성: 시작할 때 열 창) = "MainWindow.xaml"(파일 이름)
+       ▸ 뜻: 프로그램이 켜지면 MainWindow.xaml 로 만든 창을 열어라.
+       ▸ 이 한 줄이 App 과 MainWindow 를 잇는 유일한 연결이다. 지우면 프로그램이 켜지자마자 아무 창도 없이 끝난다.
+       ▸ 다른 선택: 창을 열기 전에 뭔가 하고 싶으면(로그인 창 먼저, 설정 파일 읽기) 이 줄을 지우고 App.xaml.cs 에서
+         OnStartup 을 override 해 new MainWindow().Show() 를 직접 부른다. 지금은 필요 없다. -->
+<Application x:Class="SmartFactoryVision.Client.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:SmartFactoryVision.Client"
              StartupUri="MainWindow.xaml">
+    <!-- ▸ 단어 분해: <Application.Resources>(② 속성 요소: Application 의 Resources 속성을 태그로 펼친 것. Grid.ColumnDefinitions 와 같은 문법)
+         ▸ 뜻: 모든 창이 공유하는 자원(색, 글꼴, 스타일) 창고. 지금은 비어 있다.
+         ▸ 예: 여기에 <SolidColorBrush x:Key="OkColor" Color="Green" /> 을 두면 어느 창에서든 Foreground="{StaticResource OkColor}" 로 쓸 수 있다.
+           지금은 OK/NG 색을 .xaml.cs 에서 Brushes.Green/Red 로 직접 넣고 있어 창고가 필요 없다. -->
     <Application.Resources>
-         
+
     </Application.Resources>
 </Application>

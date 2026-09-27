@@ -1,10 +1,80 @@
-﻿<!--
-  이 파일은 검사 화면의 "배치"만 정한다. 버튼을 누르면 무슨 일이 일어나는지는 MainWindow.xaml.cs 가 담당한다.
-  실행 흐름: 프로그램이 켜지면 App.xaml 이 이 창을 연다 → 사용자가 카메라를 열고 → "검사" 버튼 →
-            .xaml.cs 가 프레임을 FastAPI /inspect 로 보내고 → 응답을 아래 ResultText·CountText 에 써 넣는다.
-  알아야 할 개념: XAML 은 HTML 처럼 태그로 화면을 적는 형식이다. 태그 하나 = 화면 요소 하나.
-                  x:Name 을 붙인 요소만 .xaml.cs 에서 그 이름으로 만질 수 있다.
+<!--
+  ╔════════════════════════════════════════════════════════════════════════════════════╗
+  ║  MainWindow.xaml : 검사 화면의 "배치"                                                  ║
+  ║  (버튼을 누르면 무슨 일이 일어나는지는 짝 파일 MainWindow.xaml.cs 가 담당한다)              ║
+  ╚════════════════════════════════════════════════════════════════════════════════════╝
+
+  ┌ 0. 이 파일은 무엇이고 언제 읽히나 ─────────────────────────────────────────────────────
+  │  빌드 때  : XAML 처리기가 이 파일을 읽어 obj/…/MainWindow.g.cs(x:Name 마다 변수 하나)와 .baml(압축본)을 만든다.
+  │  실행 때  : App.xaml 의 StartupUri 가 이 창을 열고, MainWindow() 생성자의 InitializeComponent() 가 .baml 을 읽어
+  │            아래 태그 하나하나를 진짜 객체(Grid, Button …)로 만든다.
+  │  그 뒤    : .xaml.cs 가 x:Name 요소의 속성(CameraImage.Source, StatusText.Text …)을 바꾸면 화면이 다시 그려진다.
+  │
+  ├ 1. XAML 의 단 하나의 원리: 태그 하나 = C# 객체 하나 ────────────────────────────────────
+  │
+  │     <Button x:Name="InspectButton" Content="검사" Height="40" />
+  │     ≡ C#  Button InspectButton = new Button();  InspectButton.Content = "검사";  InspectButton.Height = 40;
+  │
+  │  태그 이름 = 클래스 이름(②), 속성 이름 = 그 클래스의 속성 이름(②), 속성 값 = 넣을 값, x:Name = 변수 이름(③).
+  │  그래서 없는 속성을 쓰면(Hieght) "Button 에 그런 속성 없음" 빌드 오류가 난다. 대소문자도 구분한다.
+  │
+  ├ 2. 이름은 세 종류 (.xaml.cs 의 1 절과 같은 구분) ─────────────────────────────────────
+  │  ① XML/XAML 문법     : <  >  />  =  "…"  xmlns  x:  <!‐‐ ‐‐>(주석)      → 바꿀 수 없다
+  │  ② WPF 가 정한 이름   : Window Grid StackPanel Border Image TextBlock TextBox Button ComboBox ComboBoxItem
+  │                         ColumnDefinition  (클래스)
+  │                         Title Height Width Margin Text FontSize Foreground Content Stretch Orientation
+  │                         SelectedIndex Background BorderBrush BorderThickness HorizontalAlignment
+  │                         VerticalAlignment TextWrapping FontWeight Click  (속성·이벤트)
+  │                         Grid.Column Grid.ColumnDefinitions  (Grid 가 정한 첨부 속성·속성 요소)
+  │                       → 어느 사전에서 왔나: xmlns="…/presentation" 이 여는 WPF 사전. .xaml.cs 의 using System.Windows.Controls 에 해당.
+  │  ③ 내가 지은 이름     : x:Name 의 값(CameraImage, StatusText …), Click 의 값(OpenCameraButton_Click …),
+  │                         화면에 보이는 글자("카메라 열기", "볼트" …)
+  │                       → x:Name 과 Click 값은 .xaml.cs 와 글자까지 맞춰야 한다.
+  │
+  ├ 3. XML 기본 규칙 ───────────────────────────────────────────────────────────────────
+  │  <태그 속성="값">자식들</태그>     자식이 없으면  <태그 속성="값" />  로 한 번에 닫는다.
+  │  속성 값은 숫자라도 항상 따옴표. 대소문자 구분. 주석은 <!‐‐ ‐‐> 이고 주석 안에 하이픈 두 개를 이어 쓰면 오류.
+  │  들여쓰기는 사람 보기용. 빌드는 무시한다.
+  │
+  ├ 4. 컨테이너(틀) 세 가지 ─────────────────────────────────────────────────────────────
+  │  Grid        : 표. 행·열을 나누고 자식에게 Grid.Row / Grid.Column 으로 자리를 준다. 정밀 배치용.
+  │  StackPanel  : 자식을 위→아래(기본) 또는 좌→우(Orientation="Horizontal")로 차곡차곡. 간단한 나열용.
+  │  Border      : 자식 하나를 감싸 테두리·배경을 그린다.
+  │  다른 선택   : DockPanel(상하좌우 붙이기), WrapPanel(줄 바꿈 나열), Canvas(좌표 직접 지정). 이 화면엔 안 썼다.
+  │
+  ├ 5. 컨트롤(보이는 것) 여섯 가지 ──────────────────────────────────────────────────────
+  │  TextBlock  : 읽기 전용 글자.       속성 Text
+  │  TextBox    : 입력 칸.              속성 Text (코드에서 .Text 로 읽으면 문자열)
+  │  Button     : 버튼.                 속성 Content(안에 보이는 것), 이벤트 Click
+  │  ComboBox   : 드롭다운.             자식 ComboBoxItem, 속성 SelectedIndex
+  │  Image      : 그림.                 속성 Source(BitmapSource), Stretch
+  │  다른 선택  : Label(TextBlock 비슷), CheckBox, Slider, ProgressBar, DataGrid(표. 이력 화면에 쓸 후보) …
+  └────────────────────────────────────────────────────────────────────────────────────
 -->
+
+<!-- ▸ 여는 태그 <Window …> 의 속성 한 줄씩. (XML 규칙: 태그 "안" 에는 주석을 못 넣어서 위에 모아 적는다)
+
+     x:Class="SmartFactoryVision.Client.MainWindow"
+       ▸ 단어 분해: Window(② 클래스 = 창) x:Class(① XAML 문법: 짝 C# 클래스) = "namespace.클래스"(③)
+       ▸ 뜻: 이 파일은 Window 객체이고, 그 C# 절반은 SmartFactoryVision.Client 의 MainWindow 클래스다.
+       ▸ 왜: 이 값이 .xaml.cs 의 namespace + class 이름과 맞아야 partial 로 합쳐진다. 틀리면 InitializeComponent 를 못 찾는다.
+
+     xmlns="…/presentation"
+       ▸ 기본 사전(①). 접두어 없는 태그(Grid, Button …)는 이 WPF 사전에서 찾아라.
+       ▸ 주소처럼 생겼지만 인터넷에 접속하지 않는다. 고유한 이름표일 뿐. .xaml.cs 의 using System.Windows.* 에 해당.
+
+     xmlns:x="…/xaml"
+       ▸ x: 접두어 사전(①). x:Class, x:Name 처럼 x: 가 붙은 것은 XAML 자체 문법 사전에서 찾아라.
+
+     xmlns:d / xmlns:mc / mc:Ignorable="d"
+       ▸ 비주얼 스튜디오 디자이너용. 우리는 안 쓴다. 세 줄 다 지워도 동작한다. 템플릿이 넣어 둔 것.
+
+     xmlns:local="clr-namespace:SmartFactoryVision.Client"
+       ▸ 내 프로젝트의 클래스를 XAML 에서 <local:…> 으로 쓸 때의 접두어(③). 지금은 안 쓴다.
+
+     Title / Height / Width
+       ▸ Window 의 속성(②): 제목 표시줄 글자, 창 크기(픽셀).
+       ▸ 다른 선택: WindowState="Maximized" 를 붙이면 최대화로 시작. ResizeMode="NoResize" 면 크기 고정. -->
 <Window x:Class="SmartFactoryVision.Client.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -14,43 +84,69 @@
         mc:Ignorable="d"
         Title="스마트팩토리 비전 검사" Height="640" Width="960">
 
-    <!-- Margin="10": 창 테두리와 내용 사이 여백 10픽셀. 없으면 화면이 창에 딱 붙어 답답하다 -->
+    <!-- ▸ 단어 분해: <Grid(② 표 컨테이너) Margin(② 속성: 바깥 여백)="10"(사방 10픽셀)>
+         ▸ 왜 Grid 가 하나만: Window 안에는 자식이 하나만 들어간다. 그래서 그 하나를 컨테이너로 두고 그 안에 나머지를 넣는다.
+         ▸ Margin="10" 은 "10,10,10,10" 의 줄임. 없으면 내용이 창 테두리에 딱 붙는다. -->
     <Grid Margin="10">
 
-        <!-- 열을 두 개로 나눈다. 왼쪽은 카메라(남는 공간 전부), 오른쪽은 조작판(300픽셀 고정) -->
+        <!-- ▸ 단어 분해: <Grid.ColumnDefinitions>(② "속성 요소" 문법: Grid 의 ColumnDefinitions 속성을 태그로 펼친 것)
+             ▸ 왜 태그로: ColumnDefinitions 는 값이 하나가 아니라 "열 목록" 이라 ="…" 로 못 적는다. 클래스이름.속성이름 꼴이면 속성 요소다.
+             ▸ 안의 <ColumnDefinition Width="…" /> 하나가 열 하나. 순서대로 0열, 1열.
+             ▸ Width 의 값: "*" = 남는 공간 전부 / "300" = 300픽셀 고정 / "Auto" = 내용물 크기 / "2*" = 다른 * 의 두 배
+             ▸ 행을 나누려면 <Grid.RowDefinitions> 와 <RowDefinition Height="…" />. 이 화면은 열만 나눴다. -->
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="300" />
         </Grid.ColumnDefinitions>
 
-        <!-- 왼쪽 열: 카메라 미리보기.
-             Image 의 Source 는 .xaml.cs 가 프레임마다 바꿔 넣는다. 지금은 비어 있어서 검은 배경만 보인다.
-             Stretch="Uniform": 비율을 유지한 채 칸에 맞춰 키운다(1:1 크롭 사진이 찌그러지지 않게) -->
+        <!-- ▸ 단어 분해: <Border(② 테두리 컨테이너) Grid.Column(② 첨부 속성)="0"(0열에 놓아라) BorderBrush(② 테두리 색)="Gray" BorderThickness(② 두께)="1" Background(② 배경색)="Black">
+             ▸ 첨부 속성: Grid.Column 은 Border 의 속성이 아니다. 부모 Grid 가 자식에게 "너는 0열" 이라고 붙이는 메모라서 이름이 Grid. 으로 시작한다.
+             ▸ 생략하면 0. Grid.Row 도 생략했으니 0행. 행을 안 나눴으니 0행뿐.
+             ▸ 왜 Border 로 감쌌나: Image 자체는 테두리·배경이 없다. 카메라를 열기 전 "여기가 화면 자리" 임을 검은 배경으로 보여 주려고. -->
         <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Background="Black">
+            <!-- ▸ 단어 분해: <Image(② 그림 컨트롤) x:Name(① 변수 이름 붙이기)="CameraImage"(③) Stretch(② 맞춤 방식)="Uniform" />
+                 ▸ 뜻: CameraImage 라는 이름의 Image 를 만든다. Source(그림)는 비어 있고 .xaml.cs 의 Timer_Tick 이 33ms 마다 채운다.
+                 ▸ x:Name 의 효과: 빌드가 g.cs 에  internal Image CameraImage;  를 만들어 준다. 그래서 코드에서 CameraImage.Source = … 가 된다.
+                 ▸ Stretch 의 값: "Uniform" = 비율 유지하며 칸에 맞춤(여백 생김) / "Fill" = 비율 무시하고 꽉(찌그러짐) / "UniformToFill" = 비율 유지하며 꽉(잘림) / "None" = 원본 크기 -->
             <Image x:Name="CameraImage" Stretch="Uniform" />
         </Border>
 
-        <!-- 오른쪽 열: 조작판. StackPanel 은 자식을 위에서 아래로 차곡차곡 놓는다 -->
+        <!-- ▸ 단어 분해: <StackPanel(② 쌓기 컨테이너) Grid.Column="1"(1열) Margin="10,0,0,0"(왼쪽만 10)>
+             ▸ Margin 순서: 왼쪽, 위, 오른쪽, 아래. CSS(위·오·아·왼)와 다르다.
+             ▸ Orientation 을 안 썼으니 기본값 Vertical(위→아래). -->
         <StackPanel Grid.Column="1" Margin="10,0,0,0">
 
-            <!-- 카메라 번호 선택. 내장 0번 / USB 1번이 PC 마다 달라서 화면에서 고른다 (상태판 9/22 결정).
-                 SelectedIndex="0": 처음 켜면 첫 항목("0")이 선택돼 있다 -->
+            <!-- ▸ <TextBlock Text="카메라 번호" /> : 읽기 전용 글자. x:Name 이 없다 = 코드에서 만질 일이 없어서 변수를 안 만든 것. -->
             <TextBlock Text="카메라 번호" />
+
+            <!-- ▸ StackPanel 안에 또 StackPanel. Orientation="Horizontal" 이라 이 안의 자식(콤보박스, 버튼)은 좌→우로 놓인다.
+                 ▸ Margin="0,4,0,12" : 위 4, 아래 12. 위 글자와 살짝 띄우고, 다음 묶음과는 더 띄운다. -->
             <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+                <!-- ▸ 단어 분해: <ComboBox(② 드롭다운) x:Name="CameraIndexBox"(③) Width="80" SelectedIndex(② 선택된 순번)="0"(첫 항목)>
+                     ▸ 자식 <ComboBoxItem Content="0" /> 하나가 항목 하나. 순서대로 0번, 1번, 2번 항목.
+                     ▸ .xaml.cs 의 CameraIndexBox.SelectedIndex 가 이 순번을 읽어 카메라 번호로 쓴다. 항목 순서를 바꾸면 그 가정이 깨진다.
+                     ▸ 왜 화면에서 고르나: 내장 0번 / USB 1번이 PC 마다 달라서(상태판 9/22 결정). -->
                 <ComboBox x:Name="CameraIndexBox" Width="80" SelectedIndex="0">
                     <ComboBoxItem Content="0" />
                     <ComboBoxItem Content="1" />
                     <ComboBoxItem Content="2" />
                 </ComboBox>
-                <!-- Click="…": 누르면 .xaml.cs 의 같은 이름 함수가 실행된다 (이벤트 연결) -->
+                <!-- ▸ 단어 분해: <Button x:Name="OpenCameraButton"(③) Content(② 안에 보이는 것)="카메라 열기" Width="100" Margin="8,0,0,0"(왼쪽 8) Click(② 이벤트)="OpenCameraButton_Click"(③ .xaml.cs 함수 이름) />
+                     ▸ Click="…" : 누르면 .xaml.cs 의 같은 이름 함수를 불러라. 함수가 없거나 이름이 다르면 빌드 오류.
+                     ▸ 왜 Text 가 아니라 Content: 버튼 안에는 글자뿐 아니라 그림·다른 컨트롤도 넣을 수 있어서 "내용물" 이라는 이름.
+                     ▸ 다른 선택: IsEnabled="False" 를 붙이면 처음부터 회색(못 누름). .xaml.cs 의 InspectButton.IsEnabled = false 와 같은 속성. -->
                 <Button x:Name="OpenCameraButton" Content="카메라 열기" Width="100" Margin="8,0,0,0" Click="OpenCameraButton_Click" />
             </StackPanel>
 
-            <!-- 기대 개수 입력 3칸. /inspect 요청의 bolt·nut·washer Form 값이 여기서 나온다.
-                 TextBox 는 글자 입력칸이라 "3" 이 문자열로 들어온다. 숫자로 바꾸는 것은 .xaml.cs 몫 -->
+            <!-- ▸ 기대 개수 입력 3칸. /inspect 요청의 bolt·nut·washer Form 값이 여기서 나온다.
+                 ▸ 같은 모양(가로 StackPanel 안에 글자 + 입력칸)을 세 번 반복. -->
             <TextBlock Text="기대 개수" />
             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <!-- ▸ Width="50" : 글자 칸 폭을 고정해 세 줄의 입력칸이 세로로 나란히 정렬되게. VerticalAlignment="Center" : 입력칸 높이의 가운데에 글자. -->
                 <TextBlock Text="볼트" Width="50" VerticalAlignment="Center" />
+                <!-- ▸ 단어 분해: <TextBox(② 입력 칸) x:Name="BoltExpectedBox"(③) Text(② 들어 있는 글자)="0"(처음 값) Width="60" />
+                     ▸ TextBox 와 TextBlock: Box = 입력, Block = 표시. 이름이 비슷해 헷갈리기 쉽다.
+                     ▸ 코드에서 BoltExpectedBox.Text 로 읽으면 항상 문자열("3"). 정수로 바꾸는 건 .xaml.cs 의 int.TryParse. -->
                 <TextBox x:Name="BoltExpectedBox" Text="0" Width="60" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -62,17 +158,22 @@
                 <TextBox x:Name="WasherExpectedBox" Text="0" Width="60" />
             </StackPanel>
 
-            <!-- 검사 버튼. 누르면 .xaml.cs 의 InspectButton_Click 이 현재 프레임을 /inspect 로 보낸다 -->
+            <!-- ▸ 검사 버튼. Height="40" FontSize="16" 으로 다른 버튼보다 크게. Click → .xaml.cs 의 InspectButton_Click 이 현재 프레임을 /inspect 로 보낸다. -->
             <Button x:Name="InspectButton" Content="검사" Height="40" FontSize="16" Click="InspectButton_Click" />
 
-            <!-- 판정 결과. 서버 응답의 "result"(OK/NG) 가 들어간다. 멀리서도 보이게 크게 -->
+            <!-- ▸ 단어 분해: <TextBlock x:Name="ResultText"(③) Text="-"(처음 값) FontSize="48" FontWeight(② 굵기)="Bold" HorizontalAlignment(② 가로 정렬)="Center" Margin="0,16,0,8" />
+                 ▸ 서버 응답의 "result"(OK/NG) 가 들어간다. 멀리서도 보이게 48픽셀 굵게.
+                 ▸ 글자색(Foreground)은 여기서 안 정하고 .xaml.cs 가 OK 면 초록, NG 면 빨강으로 바꾼다. XAML 의 속성과 코드의 속성은 같은 것이다.
+                 ▸ HorizontalAlignment 의 값: Left / Center / Right / Stretch(기본, 칸 폭만큼 늘림) -->
             <TextBlock x:Name="ResultText" Text="-" FontSize="48" FontWeight="Bold"
                        HorizontalAlignment="Center" Margin="0,16,0,8" />
 
-            <!-- 세어진 개수. 서버 응답의 "counts" 가 "볼트 3 / 너트 3 / 와셔 3" 꼴로 들어간다 -->
+            <!-- ▸ 세어진 개수. 서버 응답의 "counts" 가 "볼트 3 / 너트 3 / 와셔 3" 꼴로 들어간다. -->
             <TextBlock x:Name="CountText" Text="볼트 - / 너트 - / 와셔 -" HorizontalAlignment="Center" />
 
-            <!-- 상태 메시지. "카메라 열림", "서버 연결 실패" 같은 안내. TextWrapping: 길면 줄바꿈 -->
+            <!-- ▸ 상태 메시지. "카메라 열림", "서버 연결 실패" 같은 안내가 들어간다.
+                 ▸ Foreground="Gray" : 글자색. 이름으로 쓰거나 "#808080" 같은 색 코드도 된다.
+                 ▸ TextWrapping="Wrap" : 글이 칸 폭을 넘으면 줄바꿈. 없으면(기본 NoWrap) 잘려 안 보인다. 서버 오류 메시지가 길어서 필요. -->
             <TextBlock x:Name="StatusText" Text="카메라를 열어 주세요" Foreground="Gray"
                        Margin="0,16,0,0" TextWrapping="Wrap" />
         </StackPanel>
