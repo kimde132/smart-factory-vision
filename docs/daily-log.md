@@ -71,6 +71,14 @@
 - **Claude 오독 → 사용자 정정:** 엑셀의 기대 6/6/6·검출 6/5/6 NG 13회를 "너트 놓침"으로 잘못 읽고 README·일지에 실패로 썼다. 사용자: "못 찾아서 NG난 게 아니라 일부러 NG 나도록 한 거". 세 문서 정정. **엑셀 이력만으로는 "의도한 NG"와 "모델 오류 NG"를 구분할 수 없다** — 이력에 사진 경로가 있어야 되짚을 수 있다는 근거가 하나 더 생겼다
 - **README.md 초안(Claude)** — 시연 4장, 시스템 그림, EXP 사이클 표, s09 나눠 말하기, 라이브 검사 사실, 데이터 결정 5개, 스택, 실행, 폴더, 문서, 한계. **사용자가 읽고 고친다**
 
+**🏁 9/28 밤 — 프로젝트 종료 결정 + 전 파일 강의형 주석**
+- 사용자: "프로젝트는 일단 여기까지하고 종료. 기업 지원이 맞는 것 같고, 추후 여유가 생기면 추가 진행." 선택 항목 4개는 상태판에 남김
+- **마지막 요청: 모든 파일을 한 줄씩 뜯어보며 이해할 수 있는 주석으로.** WPF 6개·`export_excel.py`와 같은 형식(`▸ 단어 분해/뜻/왜/다른 선택` + 상단 이름 3종·import 사전·개념·자료 모양)을 나머지 전부에 적용:
+  `ai-server/` main.py · db.py · models.py · check_db.py · migrations/env.py · versions/…create_inspection_table.py / `scripts/` predict_count · train · verify_counts · crop_session · rename_session · split_dataset · start_labelstudio.ps1 / `data.yaml`
+  코드 본문은 한 글자도 안 바꿈. 기존 주석의 사실(날짜·결정·숫자)은 전부 유지. `data.yaml`의 채워진 지 오래인 `TODO` 두 개와 낡은 숫자(train 140·test 35)는 현재 값(215·70)으로 정정. `main.py` 상단의 "GET /history가 읽는다"도 "export_excel.py가 읽는다"로
+- Claude 도구 장애: 병렬 위임(Agent)과 쉘(PowerShell·Bash)이 "분류기 일시 불능"으로 약 30분 막혀 14개 파일을 Claude가 직접 순차 작성. 사용자 PC 문제 아님
+- **검증 통과(쉘 복구 후):** git HEAD 대비 AST(docstring 제거) 비교 **13/13 동일** · `py_compile` OK · `data.yaml` 파싱 OK · `.ps1` 구문 OK. 코드 본문이 한 글자도 안 바뀐 것이 기계적으로 확인됐다
+
 **환경·설정 변경**
 - `storage/`에 엑셀 파일 생기기 시작(git 제외). `docs/images/demo_*.png` 6장 추가(git 포함). 촬영·모델·DB 변경 없음
 - `inspection` 표 37행 (9/22 시험 2 + 9/26 본가 5 + 9/28 기숙사 30)

@@ -4,51 +4,79 @@ Revision ID: d5097882b38e
 Revises:
 Create Date: 2026-09-22 10:03:49.209871
 
-─────────────────────────────────────────────────────────────────────────────
-이 파일은 무엇을 하는가
-  첫 마이그레이션. 검사 이력 표 inspection 을 만든다 (upgrade) / 지운다 (downgrade).
-  `alembic revision --autogenerate -m "create inspection table"` 이 models.py 의 Inspection 과
-  빈 DB 를 비교해 자동으로 써 준 파일이다. 사용자가 읽고 확인한 뒤 `alembic upgrade head` 로 적용했다 (2026-09-22).
-  주석만 Claude 가 추가했고 코드는 자동 생성 그대로다.
+╔══════════════════════════════════════════════════════════════════════════════════════════╗
+║  첫 마이그레이션 — 검사 이력 표 inspection 을 만든다 (upgrade) / 지운다 (downgrade)              ║
+╚══════════════════════════════════════════════════════════════════════════════════════════╝
 
-프로젝트 실행 흐름에서 어느 위치인가
-  models.py (설계) ──autogenerate──▶ [현재 파일] ──upgrade head──▶ 실제 DB 의 inspection 표
-  앞: migrations/env.py 가 db.build_url() 로 접속하고 Base.metadata 에서 설계를 읽는다.
-  뒤: 표가 생긴 뒤 main.py 가 검사마다 행을 넣는다. 이 파일은 다시 실행되지 않는다
-      (alembic_version 표에 d5097882b38e 가 기록되어 "이미 적용됨" 으로 처리된다).
-  ★ 적용된 마이그레이션 파일은 고치지 않는다. 표를 바꾸려면 models.py 를 고치고 새 마이그레이션을 만든다.
-
-이 파일을 이해하기 전에 알아야 할 개념
-  revision      : 이 마이그레이션의 고유 번호. 파일 이름 가운데의 d5097882b38e. git 의 커밋 해시와 같은 역할.
-  down_revision : 바로 앞 마이그레이션의 번호. None 이면 첫 번째라는 뜻. 다음 마이그레이션의 down_revision 이 d5097882b38e 가 된다.
-                  이 연결로 Alembic 이 적용 순서를 안다.
-  op            : Alembic 이 주는 "DB 구조를 바꾸는 명령 모음". op.create_table → CREATE TABLE, op.drop_table → DROP TABLE.
-  sa.Column     : 컬럼 하나. models.py 의 mapped_column 한 줄이 여기서 sa.Column 한 줄로 바뀌어 있다.
-─────────────────────────────────────────────────────────────────────────────
+┌ 0. 이 파일은 무엇이고 언제 읽히나 ─────────────────────────────────────────────────────────
+│
+│  `alembic revision --autogenerate -m "create inspection table"` 이 models.py 의 Inspection 과 빈 DB 를 비교해
+│  자동으로 써 준 파일이다. 사용자가 읽고 확인한 뒤 `alembic upgrade head` 로 적용했다 (2026-09-22).
+│  주석만 Claude 가 추가했고 코드는 자동 생성 그대로다. (맨 위 5줄 docstring 도 Alembic 이 쓴 것)
+│
+│  models.py (설계) ──autogenerate──▶ [현재 파일] ──upgrade head──▶ 실제 DB 의 inspection 표
+│  앞: migrations/env.py 가 db.build_url() 로 접속하고 Base.metadata 에서 설계를 읽는다.
+│  뒤: 표가 생긴 뒤 main.py 가 검사마다 행을 넣는다. 이 파일은 다시 실행되지 않는다
+│      (alembic_version 표에 d5097882b38e 가 기록되어 "이미 적용됨" 으로 처리된다).
+│  ★ 적용된 마이그레이션 파일은 고치지 않는다. 표를 바꾸려면 models.py 를 고치고 새 마이그레이션을 만든다.
+│    다음 마이그레이션(사진 경로 컬럼 추가)이 생기면 그 파일의 down_revision 이 이 파일의 revision(d5097882b38e)이 된다.
+│
+│  실행 순서: env.py 의 context.run_migrations() 가 alembic_version 을 보고, 아직 안 된 파일의 upgrade() 를 순서대로 부른다.
+│
+├ 1. 이름은 세 종류 ─────────────────────────────────────────────────────────────────────
+│
+│  ① Python 키워드      : from import def
+│  ② 라이브러리가 정한 이름
+│       Sequence Union                          ← typing (Python 기본). 타입 힌트용
+│       op .create_table .drop_table            ← alembic
+│       sa.Column sa.Integer sa.Unicode sa.text sa.PrimaryKeyConstraint  ← sqlalchemy (sa 로 줄임)
+│       mssql.DATETIME2                         ← sqlalchemy.dialects
+│       revision down_revision branch_labels depends_on upgrade downgrade  ← Alembic 이 정한 변수·함수 이름. 바꾸면 Alembic 이 못 찾는다
+│  ③ 내가 지은 이름
+│       "inspection"(표 이름)과 컬럼 이름 10개 — 전부 models.py 에서 온 것. 여기서 지은 게 아니라 autogenerate 가 옮겨 적었다.
+│       "d5097882b38e" — Alembic 이 무작위로 만든 번호. 우리가 지은 건 아니지만 우리 프로젝트의 것.
+│
+├ 2. import 사전 ────────────────────────────────────────────────────────────────────────
+│
+│  from typing import Sequence, Union          (Python 기본) → 아래 변수들의 타입 힌트. 자동 생성 틀이 넣은 것
+│  from alembic import op                      (pip)         → DB 구조 변경 명령 모음
+│  import sqlalchemy as sa                     (pip)         → 컬럼·타입
+│  from sqlalchemy.dialects import mssql       (pip)         → SQL Server 전용 타입
+│
+├ 3. 알아야 할 개념 ───────────────────────────────────────────────────────────────────
+│
+│  revision      : 이 마이그레이션의 고유 번호. 파일 이름 가운데의 d5097882b38e. git 의 커밋 해시와 같은 역할.
+│  down_revision : 바로 앞 마이그레이션의 번호. None 이면 첫 번째라는 뜻. 이 연결로 Alembic 이 적용 순서를 안다.
+│  op            : Alembic 이 주는 "DB 구조를 바꾸는 명령 모음". op.create_table → CREATE TABLE, op.drop_table → DROP TABLE, op.add_column → ALTER TABLE … ADD.
+│  sa.Column     : 컬럼 하나. models.py 의 mapped_column 한 줄이 여기서 sa.Column 한 줄로 바뀌어 있다. 이름이 첫 인자로 글자로 들어간다는 점이 다르다.
+│  타입 힌트 Union[str, Sequence[str], None] : "str 이거나 str 목록이거나 None". 마이그레이션이 가지를 칠 때 목록이 될 수 있어 이렇게 넓게 적혀 있다.
+└────────────────────────────────────────────────────────────────────────────────────────
 """
 
-# 타입 표시(revision: str 등)에 쓰는 표준 라이브러리. 자동 생성 틀이 넣은 것이다.
+# ▸ Sequence, Union(② typing): 아래 revision 변수들의 타입 표시에만 쓴다. 자동 생성 틀이 넣은 것. 없어도 동작하지만 지우지 않는다.
 from typing import Sequence, Union
 
-# op : DB 구조 변경 명령 모음.
+# ▸ op(② alembic 객체): DB 구조 변경 명령 모음.
 from alembic import op
 
-# sa : SQLAlchemy 전체를 짧은 이름으로. sa.Column, sa.Integer 처럼 쓴다.
+# ▸ 단어 분해: import sqlalchemy as sa(③ 별명) — SQLAlchemy 전체를 짧은 이름으로. sa.Column, sa.Integer 처럼 쓴다. Alembic 자동 생성의 관례.
 import sqlalchemy as sa
 
-# mssql : SQL Server 전용 타입(DATETIME2)을 가져오는 방언 모듈. models.py 와 같은 곳에서 온다.
+# ▸ mssql(② 방언 모듈): SQL Server 전용 타입(DATETIME2)을 가져온다. models.py 의 from sqlalchemy.dialects.mssql import DATETIME2 와 같은 곳.
 from sqlalchemy.dialects import mssql
 
 # revision identifiers, used by Alembic.
-# 이 마이그레이션의 번호. 파일 이름과 alembic_version 표의 값과 같다.
+# ▸ 단어 분해: revision(② Alembic 이 정한 이름): str(타입 힌트) = "d5097882b38e"
+# ▸ 뜻: 이 마이그레이션의 번호. 파일 이름과 alembic_version 표의 값과 같다. ★ 바꾸면 Alembic 이 "적용된 적 없는 파일" 로 보고 다시 돌리려 한다.
 revision: str = "d5097882b38e"
-# 앞 마이그레이션 없음 = 첫 번째.
+# ▸ down_revision = None : 앞 마이그레이션 없음 = 첫 번째.
 down_revision: Union[str, Sequence[str], None] = None
-# 가지(branch) 이름과 의존 관계. 마이그레이션이 한 줄로 이어지는 우리 프로젝트에서는 쓰지 않는다.
+# ▸ branch_labels / depends_on : 가지(branch) 이름과 의존 관계. 마이그레이션이 한 줄로 이어지는 우리 프로젝트에서는 쓰지 않는다. 템플릿 그대로.
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+# ▸ 단어 분해: def upgrade(② Alembic 이 부르는 이름)() -> None:
 def upgrade() -> None:
     """Upgrade schema.
 
@@ -57,43 +85,49 @@ def upgrade() -> None:
     실패 시: 같은 이름의 표가 이미 있으면 SQL Server 가 거절한다 (ProgrammingError). 트랜잭션이라 반쯤 만들어지지 않는다.
     """
     # ### commands auto generated by Alembic - please adjust! ###
-    # 아래 10 줄은 models.py 의 컬럼 10 개와 1:1 로 대응한다. 순서도 같다.
+    # ▸ 위 줄과 맨 아래 "end" 줄은 Alembic 이 넣는 표시. "자동 생성이니 확인하고 필요하면 고쳐라" 는 뜻. 우리는 고칠 게 없어 그대로 뒀다.
+    # ▸ 단어 분해: op.create_table(② CREATE TABLE)( "inspection"(표 이름), sa.Column(…) × 10, sa.PrimaryKeyConstraint(…) )
+    # ▸ 아래 10 줄은 models.py 의 컬럼 10 개와 1:1 로 대응한다. 순서도 같다. SSMS 에서 손으로 쳤던 CREATE TABLE 과 나란히 놓고 읽어 보면 된다.
     op.create_table(
         "inspection",
-        # 기본 키. 정수 PK 는 SQL Server 에서 IDENTITY(자동 번호)가 붙는다. 맨 아래 PrimaryKeyConstraint 가 PK 를 지정한다.
+        # ▸ sa.Column("id"(컬럼 이름), sa.Integer()(INT), nullable=False(NOT NULL))
+        # ▸ 기본 키. 정수 PK 는 SQL Server 에서 IDENTITY(자동 번호)가 붙는다. PK 지정 자체는 맨 아래 PrimaryKeyConstraint 가 한다.
         sa.Column("id", sa.Integer(), nullable=False),
-        # server_default=sa.text('sysdatetime()') : DB 쪽 기본값. models.py 의 func.sysdatetime() 이 SQL 글자로 바뀐 것.
+        # ▸ sa.Column("created_at", mssql.DATETIME2(), server_default=sa.text("sysdatetime()"), nullable=False)
+        # ▸ server_default=sa.text('sysdatetime()') : DB 쪽 기본값. models.py 의 func.sysdatetime() 이 SQL 글자로 바뀐 것. sa.text = "이 글자를 SQL 그대로 넣어라".
         sa.Column(
             "created_at",
             mssql.DATETIME2(),
             server_default=sa.text("sysdatetime()"),
             nullable=False,
         ),
-        # 'OK' / 'NG'. Unicode(2) → NVARCHAR(2).
+        # ▸ 'OK' / 'NG'. sa.Unicode(length=2) → NVARCHAR(2). models.py 의 Unicode(2).
         sa.Column("result", sa.Unicode(length=2), nullable=False),
-        # 모델이 센 개수 셋.
+        # ▸ 모델이 센 개수 셋.
         sa.Column("bolt_count", sa.Integer(), nullable=False),
         sa.Column("nut_count", sa.Integer(), nullable=False),
         sa.Column("washer_count", sa.Integer(), nullable=False),
-        # 요청에 담겨 온 기대 개수 셋.
+        # ▸ 요청에 담겨 온 기대 개수 셋.
         sa.Column("bolt_expected", sa.Integer(), nullable=False),
         sa.Column("nut_expected", sa.Integer(), nullable=False),
         sa.Column("washer_expected", sa.Integer(), nullable=False),
-        # 판정한 YOLO 모델 이름. Unicode(50) → NVARCHAR(50).
+        # ▸ 판정한 YOLO 모델 이름. Unicode(50) → NVARCHAR(50).
         sa.Column("model_name", sa.Unicode(length=50), nullable=False),
-        # id 를 기본 키로. CREATE TABLE 의 PRIMARY KEY (id) 에 해당한다.
+        # ▸ sa.PrimaryKeyConstraint("id") : id 를 기본 키로. CREATE TABLE 의 PRIMARY KEY (id) 에 해당한다.
         sa.PrimaryKeyConstraint("id"),
     )
     # ### end Alembic commands ###
 
 
+# ▸ 단어 분해: def downgrade(② Alembic 이 부르는 이름)() -> None:
 def downgrade() -> None:
     """Downgrade schema.
 
     `alembic downgrade -1` 이 부른다. upgrade 를 되돌려 표 inspection 을 지운다.
     입력: 없음.  출력: 없음. DB 에 DROP TABLE inspection 이 실행된다.
-    ⚠️ 표 안의 검사 이력도 전부 사라진다. 운영 데이터가 쌓인 뒤에는 함부로 실행하지 않는다.
+    ⚠️ 표 안의 검사 이력도 전부 사라진다. 운영 데이터가 쌓인 뒤에는 함부로 실행하지 않는다 (9/28 기준 37행).
     """
     # ### commands auto generated by Alembic - please adjust! ###
+    # ▸ op.drop_table(② DROP TABLE)("inspection") : upgrade 의 정확한 반대. 9/22 에 되돌리기 리허설을 한 번 해 봤다(setup-log.md).
     op.drop_table("inspection")
     # ### end Alembic commands ###
