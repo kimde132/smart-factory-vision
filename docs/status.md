@@ -5,9 +5,19 @@
 > 작성: Claude — **커밋할 때마다 함께 갱신한다.** 낡은 상태판은 없느니만 못하다.
 > 판단과 근거는 여기 쓰지 않는다. `decisions.md`가 담당한다. 이 파일은 **포인터**다.
 >
-> 최종 갱신: **2026-09-28** (**Excel 이력 시트 완료.** `export_excel.py`. 남은 것: **README**, 기숙사 복귀 후 시연 스크린샷. 목표 마감 9/27은 하루 지남 — 사용자: "절대적 일정 아님, 진행 양호")
+> 최종 갱신: **2026-09-28 밤** (**기숙사 라이브 시연 30회 완료(모델 오류 0) + README 초안.** 남은 것: 사용자가 README 읽고 고치기 → 푸시)
 
 ---
+
+## ▶ 시연 켜는 법 (터미널 2개)
+
+| | 어디서 | 명령 |
+|---|---|---|
+| 1 서버 | `ai-server` | `.venv/Scripts/uvicorn main:app` → `Application startup complete` |
+| 2 WPF | 최상위 `smart-factory-vision` | `dotnet run --project wpf-client` |
+| 3 엑셀 | `ai-server` (서버 끈 뒤) | `.venv/Scripts/python export_excel.py` → `storage/` |
+
+카메라 번호: 내장 0 / USB 웹캠은 보통 1. 트레이는 화면 정중앙(서버가 가운데 1:1 크롭). 기대 개수 입력 → 검사.
 
 ## ▶ 지금 할 일 — 체크리스트
 
@@ -46,7 +56,8 @@
 | Excel 추출 — 검사 이력 시트 | ✅ **9/28.** `ai-server/export_excel.py`(B등급: Claude 뼈대 + 사용자 TODO 3개). `inspection` → `storage/inspection_날짜.xlsx`. 강의형 주석 |
 | `GET /history` + WPF 이력 조회 화면 | ⬜ 버릴 순서 1번 |
 | Excel 요약 시트 / 실시간 박스 / MVVM | ⬜ 버릴 순서 2·3·4번 |
-| README (Claude) | ⬜ 마지막 |
+| README (Claude) | 🔶 **9/28 초안 작성.** 사용자가 읽고 고친 뒤 닫는다 |
+| 🏠 기숙사 라이브 시연 | ✅ 9/28. 카메라 1번, 30회, 모델 오류 0(NG는 전부 의도한 것). 스크린샷 `docs/images/demo_*.png` |
 | (선택) 사진 경로 컬럼 마이그레이션 / 겹침 추가 촬영·재학습 / 대조 실험 / `predict_count.py --iou` | ⬜ 시간 남으면 |
 
 **순서 확정(9/22):** WPF 최소 검사 화면 → Excel 이력 시트 → README. **다음 첫 한마디: "README 시작하자"**
