@@ -5,7 +5,7 @@
 > 작성: Claude — **커밋할 때마다 함께 갱신한다.** 낡은 상태판은 없느니만 못하다.
 > 판단과 근거는 여기 쓰지 않는다. `decisions.md`가 담당한다. 이 파일은 **포인터**다.
 >
-> 최종 갱신: **2026-09-26** (**WPF 최소 검사 화면 완료** ①배치 ②웹캠 ③검사 호출. 4가지 확인(OK/NG/비숫자/서버 꺼짐) 통과. **다음은 Excel 이력 시트**)
+> 최종 갱신: **2026-09-28** (**Excel 이력 시트 완료.** `export_excel.py`. 남은 것: **README**, 기숙사 복귀 후 시연 스크린샷. 목표 마감 9/27은 하루 지남 — 사용자: "절대적 일정 아님, 진행 양호")
 
 ---
 
@@ -43,13 +43,16 @@
 | FastAPI `POST /inspect` | ✅ 9/20 |
 | MSSQL 저장 (SQLAlchemy·Alembic) | ✅ 9/22 |
 | **WPF 검사 화면** — 웹캠 촬영 → `/inspect` 호출 → OK/NG 표시 | ✅ **9/26.** 원서 모드(사용자 결정 9/25, `work-grades.md` #23). 9/22~24 3일이 통째로 밀려 예비일까지 씀. 시연 스크린샷은 기숙사 복귀 후 |
-| Excel 추출 — 검사 이력 시트 | ⬜ pandas라 짧다 |
+| Excel 추출 — 검사 이력 시트 | ✅ **9/28.** `ai-server/export_excel.py`(B등급: Claude 뼈대 + 사용자 TODO 3개). `inspection` → `storage/inspection_날짜.xlsx`. 강의형 주석 |
 | `GET /history` + WPF 이력 조회 화면 | ⬜ 버릴 순서 1번 |
 | Excel 요약 시트 / 실시간 박스 / MVVM | ⬜ 버릴 순서 2·3·4번 |
 | README (Claude) | ⬜ 마지막 |
 | (선택) 사진 경로 컬럼 마이그레이션 / 겹침 추가 촬영·재학습 / 대조 실험 / `predict_count.py --iou` | ⬜ 시간 남으면 |
 
-**순서 확정(9/22):** WPF 최소 검사 화면 → Excel 이력 시트 → README. **다음 첫 한마디: "Excel 시작하자"** (등급을 먼저 묻는다)
+**순서 확정(9/22):** WPF 최소 검사 화면 → Excel 이력 시트 → README. **다음 첫 한마디: "README 시작하자"**
+
+> **9/28 Excel 완료.** `ai-server/export_excel.py` — `ai-server`에서 `.venv/Scripts/python export_excel.py` → `storage/inspection_YYYYMMDD_HHMMSS.xlsx`. 시트 "검사 이력", 머리글 한국어(검출/기대 구분), 시각 초 단위, 열 너비 자동. WPF 버튼·이력 화면은 범위 밖 그대로(시간 남으면 `GET /export` → WPF 버튼).
+> **README 계획:** Claude가 전체 파일 제공 → 사용자가 읽고 고침. 재료: 상태판 0절 한 줄 요약들, `experiment-log.md` EXP-01~03, D-003/D-007/D-011/D-012. 시연 이미지는 기숙사 복귀 후 넣는다.
 
 > **9/26 WPF 완료.** `wpf-client/MainWindow.xaml`(배치) + `MainWindow.xaml.cs`(카메라 열기·타이머·프레임 표시·`/inspect` 호출). OpenCvSharp 3패키지(`setup-log.md` 6-1).
 > 흐름: 카메라 열기 → `VideoCapture` + `DispatcherTimer` 33ms → `Timer_Tick`이 `_frame`을 `CameraImage.Source`에 / 검사 → `_frame.ImEncode(".jpg")` → `HttpClient` multipart POST `localhost:8000/inspect` → `JsonDocument`로 `result`·`counts` → `ResultText`(OK 초록/NG 빨강)·`CountText`.
